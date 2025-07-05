@@ -1,53 +1,87 @@
 # Ingestion Package
 
-The ingestion package provides functionality for parsing and processing Slack export data from CSV files.
+This package provides functionality for ingesting and parsing Slack data exports in CSV format.
 
-## CSV Parser
+## Components
 
-The CSV parser is designed to handle Slack message exports with the following features:
+### CSV Parser
 
-### Features
+The CSV parser handles reading and parsing Slack export CSV files with support for:
 
-- **Batch Processing**: Process large CSV files in configurable batches to manage memory usage
-- **Progress Tracking**: Real-time progress updates during parsing
-- **Error Handling**: Configurable error handling with the ability to skip invalid records
-- **Validation**: Built-in message validation with lenient rules for real-world data
-- **Rich Data Support**: Handles thread IDs, reactions, reply counts, file attachments, and more
+- Batch processing for large files
+- Error handling and recovery
+- Progress tracking
+- Validation of records
+- Support for all Slack message fields including threads, reactions, and file attachments
 
-### Usage
+### Ingestion Service
+
+The ingestion service orchestrates the complete data ingestion pipeline:
+
+- **Concurrent Processing**: Processes messages in parallel using configurable worker pools
+- **Batch Processing**: Handles large datasets efficiently with configurable batch sizes
+- **Document Generation**: Converts Slack messages to searchable documents with embeddings
+- **Vector Storage**: Stores processed documents in Weaviate for semantic search
+- **Progress Tracking**: Provides detailed statistics and error reporting
+
+## Usage
+
+### Using the CSV Parser
 
 ```go
 import "github.com/testsabirweb/connect_llm/pkg/ingestion"
 
-// Create a new parser with default configuration
-parser := ingestion.NewCSVParser()
-
-// Or create with custom configuration
+// Create parser with custom configuration
 parser := ingestion.NewCSVParser(ingestion.ParserConfig{
-    BatchSize:       100,  // Process 100 records per batch
-    SkipErrors:      true, // Continue on errors
-    ValidateRecords: true, // Validate message data
+    BatchSize:       100,
+    SkipErrors:      true,
+    ValidateRecords: true,
 })
 
-// Parse a CSV file with batch processing
-err := parser.ParseFile("slack/messages.csv",
+// Parse a file
+messages, err := parser.ParseFile("slack_export.csv",
     func(messages []ingestion.SlackMessage, batchNum int) error {
-        // Process each batch of messages
+        // Process each batch
         fmt.Printf("Processing batch %d with %d messages\n", batchNum, len(messages))
-        // ... save to database, send to API, etc.
         return nil
     },
     func(processed, total, errors int) {
         // Progress callback
-        fmt.Printf("Progress: %d/%d messages, %d errors\n", processed, total, errors)
+        fmt.Printf("Progress: %d/%d (errors: %d)\n", processed, total, errors)
+    },
+)
+```
+
+### Using the Ingestion Service
+
+```go
+// Create service with dependencies
+service := ingestion.NewService(
+    vectorClient,      // Weaviate client
+    documentProcessor, // Document processor with embeddings
+    ingestion.ServiceConfig{
+        BatchSize:        100,
+        MaxConcurrency:   5,
+        SkipEmptyContent: true,
     },
 )
 
-// Get parsing statistics
-total, processed, errorCount := parser.GetStats()
+// Ingest a single file
+stats, err := service.IngestFile(ctx, "path/to/file.csv")
+
+// Ingest all CSV files in a directory
+stats, err := service.IngestDirectory(ctx, "path/to/directory")
+
+// Check results
+summary := stats.GetSummary()
+fmt.Printf("Processed: %v messages\n", summary["processed_messages"])
+fmt.Printf("Stored: %v documents\n", summary["stored_documents"])
+fmt.Printf("Duration: %.2f seconds\n", summary["duration_seconds"])
 ```
 
-### SlackMessage Structure
+## Data Structure
+
+The `SlackMessage` struct represents a parsed Slack message:
 
 ```go
 type SlackMessage struct {
@@ -56,81 +90,77 @@ type SlackMessage struct {
     Channel      string    // Channel ID
     User         string    // User ID
     Content      string    // Message content
-    ThreadTS     string    // Thread timestamp (for threaded messages)
+    ThreadTS     string    // Thread timestamp (if part of thread)
     Type         string    // Message type
-    Subtype      string    // Message subtype (e.g., channel_join)
+    Subtype      string    // Message subtype
     ReplyCount   int       // Number of replies
     ReplyUsers   []string  // Users who replied
     Reactions    string    // Reactions JSON
-    ParentUserID string    // Parent user for threads
-    BotID        string    // Bot ID (for bot messages)
+    ParentUserID string    // Parent message user (for threads)
+    BotID        string    // Bot ID (if from bot)
     FileIDs      []string  // Attached file IDs
 }
 ```
 
-### CSV Format
+## Service Configuration
 
-The parser expects CSV files with the following required columns:
+The ingestion service can be configured with:
 
+- **BatchSize**: Number of messages to process in each batch (default: 100)
+- **MaxConcurrency**: Maximum number of concurrent workers (default: 5)
+- **SkipEmptyContent**: Whether to skip messages with no content (default: true)
+
+## Error Handling
+
+The service provides comprehensive error handling:
+
+- Continues processing on individual message failures (configurable)
+- Collects all errors for reporting
+- Provides detailed statistics on success/failure rates
+- Supports graceful shutdown via context cancellation
+
+## Performance Considerations
+
+- Use larger batch sizes for better throughput with stable data
+- Increase concurrency for CPU-bound operations (embeddings)
+- Monitor memory usage with very large files
+- Consider chunking very long messages for better search results
+
+## CSV File Format
+
+The parser expects CSV files with the following columns:
+
+- `client_msg_id` or `ts`: Message identifier
 - `text`: Message content
 - `user`: User ID
 - `channel_id`: Channel ID
-- `ts`: Timestamp
 - `type`: Message type
+- `thread_ts`: Thread timestamp (optional)
+- `reply_count`: Number of replies (optional)
+- `reply_users`: JSON array of reply user IDs (optional)
+- `reactions`: Reactions data (optional)
+- `file_ids`: JSON array of file IDs (optional)
+- `subtype`: Message subtype (optional)
+- `bot_id`: Bot ID for bot messages (optional)
+- `parent_user_id`: Parent message user ID (optional)
 
-Optional columns include:
+## Testing
 
-- `thread_ts`: Thread timestamp
-- `subtype`: Message subtype
-- `bot_id`: Bot identifier
-- `reply_count`: Number of replies
-- `reply_users`: JSON array of reply user IDs
-- `reactions`: Reactions data
-- `file_ids`: JSON array of file IDs
-
-### Timestamp Formats
-
-The parser supports multiple timestamp formats:
-
-- Unix timestamp with microseconds: `1599934232.150700`
-- Unix timestamp (seconds): `1599934232`
-- Human-readable: `2020-09-12 18:10:32`
-- ISO 8601: `2020-09-12T18:10:32Z`
-
-### Error Handling
-
-When `SkipErrors` is enabled, the parser will:
-
-- Continue processing on invalid records
-- Track all errors for later review
-- Report error count in statistics
-
-Access errors with:
-
-```go
-errors := parser.GetErrors()
-for _, err := range errors {
-    fmt.Printf("Error: %v\n", err)
-}
-```
-
-### Performance Considerations
-
-- Default batch size is 100 records
-- Larger batch sizes use more memory but may be faster
-- Progress callbacks are called every 100 records by default
-- For very large files (millions of records), consider using smaller batch sizes
-
-### Testing
-
-Run tests with:
+The package includes comprehensive tests:
 
 ```bash
-go test ./pkg/ingestion -v
+# Run all tests
+go test ./pkg/ingestion/...
+
+# Run with coverage
+go test -cover ./pkg/ingestion/...
+
+# Run specific test
+go test -run TestCSVParser ./pkg/ingestion/...
 ```
 
-Test with actual Slack data:
+## Thread Safety
 
-```bash
-go run cmd/test_csv_parser.go slack/messages.csv
-```
+- The CSV parser is safe for concurrent use
+- The ingestion service handles concurrent processing internally
+- Statistics are updated atomically with mutex protection

@@ -3,17 +3,32 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/testsabirweb/connect_llm/internal/config"
+	"github.com/testsabirweb/connect_llm/pkg/embeddings"
+	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/processing"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
 
+// documentProcessorAdapter adapts processing.DocumentProcessor to ingestion.DocumentProcessor interface
+type documentProcessorAdapter struct {
+	processor *processing.DocumentProcessor
+}
+
+// ProcessMessage implements the ingestion.DocumentProcessor interface
+func (a *documentProcessorAdapter) ProcessMessage(ctx context.Context, msg ingestion.SlackMessage) ([]vector.Document, error) {
+	return a.processor.ProcessMessage(ctx, msg)
+}
+
 // Server represents the API server
 type Server struct {
-	config       *config.Config
-	vectorClient vector.Client
+	config           *config.Config
+	vectorClient     vector.Client
+	ingestionService *ingestion.Service
 }
 
 // NewServer creates a new API server instance
@@ -36,9 +51,25 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	log.Println("Weaviate schema initialized successfully")
 
+	// Create embedder and document processor
+	embedder := embeddings.NewOllamaEmbedder(cfg.Ollama.URL, "llama3:8b")
+	processor := processing.NewDocumentProcessor(embedder, 500, 50)
+
+	// Wrap processor with adapter
+	adapter := &documentProcessorAdapter{processor: processor}
+
+	// Create ingestion service
+	ingestionConfig := ingestion.ServiceConfig{
+		BatchSize:        100,
+		MaxConcurrency:   5,
+		SkipEmptyContent: true,
+	}
+	ingestionService := ingestion.NewService(vectorClient, adapter, ingestionConfig)
+
 	return &Server{
-		config:       cfg,
-		vectorClient: vectorClient,
+		config:           cfg,
+		vectorClient:     vectorClient,
+		ingestionService: ingestionService,
 	}, nil
 }
 
@@ -49,7 +80,7 @@ func (s *Server) Router() http.Handler {
 	// Health check endpoint
 	mux.HandleFunc("/health", s.handleHealth)
 
-	// API endpoints will be added here
+	// API endpoints
 	mux.HandleFunc("/api/v1/search", s.handleSearch)
 	mux.HandleFunc("/api/v1/ingest", s.handleIngest)
 
@@ -120,9 +151,68 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 // handleIngest handles data ingestion requests
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement ingestion functionality
-	response := map[string]string{
-		"message": "Ingest endpoint - not implemented yet",
+	// Only accept POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body
+	var req ingestion.IngestRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if req.Type != "file" && req.Type != "directory" {
+		http.Error(w, "Invalid type: must be 'file' or 'directory'", http.StatusBadRequest)
+		return
+	}
+
+	if req.Path == "" {
+		http.Error(w, "Path is required", http.StatusBadRequest)
+		return
+	}
+
+	// Perform ingestion based on type
+	ctx := r.Context()
+	var stats *ingestion.IngestionStats
+	var err error
+
+	switch req.Type {
+	case "file":
+		log.Printf("Starting file ingestion: %s", req.Path)
+		stats, err = s.ingestionService.IngestFile(ctx, req.Path)
+	case "directory":
+		log.Printf("Starting directory ingestion: %s", req.Path)
+		stats, err = s.ingestionService.IngestDirectory(ctx, req.Path)
+	}
+
+	// Prepare response
+	var response ingestion.IngestResponse
+	if err != nil {
+		log.Printf("Ingestion error: %v", err)
+		response = ingestion.IngestResponse{
+			Success: false,
+			Stats:   make(map[string]interface{}),
+			Errors:  []string{err.Error()},
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		// Convert errors to string array
+		errorStrings := make([]string, 0, len(stats.Errors))
+		for _, e := range stats.Errors {
+			errorStrings = append(errorStrings, e.Error())
+		}
+
+		response = ingestion.IngestResponse{
+			Success: true,
+			Stats:   stats.GetSummary(),
+			Errors:  errorStrings,
+		}
+
+		log.Printf("Ingestion completed successfully. Stats: %+v", stats.GetSummary())
 	}
 
 	w.Header().Set("Content-Type", "application/json")

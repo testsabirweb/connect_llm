@@ -14,10 +14,14 @@ A Golang-based semantic search and chat system for Slack data using Weaviate vec
 ```text
 connect_llm/
 ├── cmd/
-│   └── server/         # Application entry point
+│   ├── server/         # Application entry point
+│   ├── ingest/         # Data ingestion CLI tool
+│   └── weaviate-setup/ # Weaviate schema setup
 ├── pkg/
 │   ├── api/           # HTTP API server and handlers
-│   ├── ingestion/     # CSV data parsing and ingestion
+│   ├── ingestion/     # CSV data parsing and ingestion service
+│   ├── processing/    # Document processing and chunking
+│   ├── embeddings/    # Ollama embedding generation
 │   └── vector/        # Vector database operations
 ├── internal/          # Private application code
 │   ├── config/        # Configuration management
@@ -99,6 +103,66 @@ go build -o bin/server cmd/server/main.go
 make dev
 ```
 
+## Data Ingestion
+
+The system includes a powerful data ingestion service that processes Slack CSV exports, generates embeddings, and stores them in Weaviate.
+
+### Using the CLI Tool
+
+```bash
+# Build the ingestion tool
+make build-ingest
+
+# Ingest a single CSV file
+make ingest INPUT=slack/channel_general.csv
+
+# Ingest all CSV files in a directory
+make ingest INPUT=slack/
+
+# Ingest with custom settings
+make ingest INPUT=slack/ ARGS='-batch-size 200 -concurrency 10'
+```
+
+### Using the API Endpoint
+
+```bash
+# Ingest a single file via API
+curl -X POST http://localhost:8080/api/v1/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "file",
+    "path": "slack/channel_general.csv"
+  }'
+
+# Ingest a directory via API
+curl -X POST http://localhost:8080/api/v1/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "directory",
+    "path": "slack/"
+  }'
+```
+
+### Ingestion Options
+
+The ingestion tool supports several configuration options:
+
+- `--batch-size`: Number of messages to process in each batch (default: 100)
+- `--concurrency`: Maximum number of concurrent workers (default: 5)
+- `--chunk-size`: Maximum chunk size in words (default: 500)
+- `--chunk-overlap`: Chunk overlap in words (default: 50)
+- `--skip-empty`: Skip messages with empty content (default: true)
+- `--embedding-model`: Ollama model to use for embeddings (default: llama3:8b)
+
+### Quick Ingestion
+
+For a complete setup and ingestion in one command:
+
+```bash
+# This will start services, setup schema, and optionally ingest data
+make ingest-quick INPUT=slack/
+```
+
 ## API Endpoints
 
 - `GET /health` - Health check endpoint with Weaviate status
@@ -116,8 +180,40 @@ make dev
   }
   ```
 
+- `POST /api/v1/ingest` - Data ingestion endpoint
+
+  Request body:
+
+  ```json
+  {
+    "type": "file|directory",
+    "path": "/path/to/data",
+    "batch_size": 100  // optional
+  }
+  ```
+
+  Response:
+
+  ```json
+  {
+    "success": true,
+    "stats": {
+      "total_messages": 1000,
+      "processed_messages": 950,
+      "skipped_messages": 30,
+      "failed_messages": 20,
+      "total_documents": 1200,
+      "stored_documents": 1180,
+      "failed_documents": 20,
+      "error_count": 20,
+      "duration_seconds": 45.2,
+      "messages_per_second": 21.0
+    },
+    "errors": ["error1", "error2"]
+  }
+  ```
+
 - `GET /api/v1/search` - Search endpoint (to be implemented)
-- `POST /api/v1/ingest` - Data ingestion endpoint (to be implemented)
 
 ## Environment Variables
 
@@ -162,7 +258,11 @@ git commit --no-verify
 ### Running tests
 
 ```bash
+# Run all tests
 go test ./...
+
+# Run tests with coverage
+make test-coverage
 ```
 
 ### Adding dependencies
@@ -188,7 +288,7 @@ go mod tidy
 1. ~~Configure Weaviate schema for document storage (Task 2)~~ ✅
 2. ~~Implement CSV data parser for Slack export (Task 3)~~ ✅
 3. ~~Build document processing pipeline (Task 4)~~ ✅
-4. Create data ingestion service (Task 5)
+4. ~~Create data ingestion service (Task 5)~~ ✅
 5. Implement search API endpoints (Task 6)
 
 ## License
