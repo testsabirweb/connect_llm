@@ -1,6 +1,6 @@
 # Task ID: 3
 # Title: Implement CSV data parser
-# Status: pending
+# Status: done
 # Dependencies: 1 (Not found)
 # Priority: high
 # Description: Create CSV parser to read Slack data from the slack directory

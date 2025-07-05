@@ -1,6 +1,6 @@
 # Task ID: 2
 # Title: Configure Weaviate vector database
-# Status: pending
+# Status: done
 # Dependencies: 1 (Not found)
 # Priority: high
 # Description: Set up Weaviate instance and create schema for document storage
