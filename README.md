@@ -11,7 +11,7 @@ A Golang-based semantic search and chat system for Slack data using Weaviate vec
 
 ## Project Structure
 
-```
+```text
 connect_llm/
 ├── cmd/
 │   └── server/         # Application entry point
