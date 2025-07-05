@@ -1,0 +1,44 @@
+# Gitleaks configuration file
+# See https://github.com/gitleaks/gitleaks for more information
+
+[extend]
+# Extend the base configuration
+useDefault = true
+
+[allowlist]
+# Global allowlist
+description = "Global allowlist"
+paths = [
+  # Don't scan these files/directories
+  '''vendor/''',
+  '''node_modules/''',
+  '''.git/''',
+  '''bin/''',
+  # Example files are meant to have placeholders
+  '''.*\.example$''',
+  '''env-example$''',
+]
+
+# Custom rules for this project
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(api[_\-\s]?key|apikey)[[:space:]]*[:=][[:space:]]*['"]?([a-zA-Z0-9\-_]{20,})['"]?'''
+keywords = ["api", "key", "apikey"]
+
+# Allowlist for specific patterns that are not real secrets
+[rules.allowlist]
+regexes = [
+  # Allow placeholder API keys in example files
+  '''your-.*-api-key-here''',
+  '''YOUR_.*_API_KEY_HERE''',
+  '''<your-.*-key>''',
+  '''\{\{.*\}\}''',  # Template variables
+]
+stopwords = [
+  "example",
+  "test",
+  "demo",
+  "placeholder",
+  "dummy",
+] 

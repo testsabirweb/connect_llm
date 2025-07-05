@@ -95,6 +95,35 @@ docker compose up
 
 ## Development
 
+### Security: Pre-commit Hooks
+
+This project uses pre-commit hooks to prevent security issues and maintain code quality. To set up:
+
+```bash
+# Run the setup script
+./scripts/setup-pre-commit.sh
+
+# Or manually install pre-commit
+pip install pre-commit
+pre-commit install
+```
+
+The hooks will automatically:
+- 🔒 **Prevent secrets** from being committed (API keys, passwords, etc.)
+- 🐹 **Format and lint Go code** before commits
+- 📝 **Validate** YAML, JSON, and other config files
+- 🧹 **Clean up** trailing whitespace and file endings
+
+To run hooks manually:
+```bash
+pre-commit run --all-files
+```
+
+To bypass hooks in emergencies (use sparingly):
+```bash
+git commit --no-verify
+```
+
 ### Running tests
 
 ```bash
