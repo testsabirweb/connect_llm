@@ -1,0 +1,403 @@
+<context>
+# Overview
+ConnectLLM is an internal knowledge search and discovery platform that provides intelligent, unified access to company data across various sources. Similar to Glean, it enables employees to instantly find information scattered across internal systems through semantic search and conversational AI. The platform starts with CSV data ingestion and will expand to real-time connectors for Slack, Jira, GitHub, and Google Workspace.
+
+The solution addresses the critical problem of information silos in organizations where valuable knowledge is trapped in disconnected systems, causing employees to waste hours searching for information, duplicating work, or making decisions without full context.
+
+# Core Features
+
+## Semantic Search Engine
+- **What it does**: Provides intelligent search across all indexed company data using vector embeddings and natural language understanding
+- **Why it's important**: Enables employees to find information using natural language queries rather than exact keyword matches
+- **How it works**: Leverages Weaviate vector database to store and query document embeddings, with relevance ranking based on semantic similarity
+
+## Conversational AI Assistant
+- **What it does**: Offers a chatbot interface powered by Ollama's llama3:8b model for interactive Q&A
+- **Why it's important**: Allows users to ask follow-up questions, get summaries, and extract insights from search results
+- **How it works**: Integrates search results with LLM context to provide intelligent responses
+
+## Multi-Source Data Ingestion
+- **What it does**: Ingests and indexes data from CSV files (initial) and future connectors
+- **Why it's important**: Creates a unified knowledge base from disparate data sources
+- **How it works**: Processes various data formats, extracts metadata, and generates embeddings for vector search
+
+## Permission-Aware Results
+- **What it does**: Respects source system permissions and only shows results users have access to
+- **Why it's important**: Maintains security and compliance while enabling broad search capabilities
+- **How it works**: Stores and checks access control metadata alongside indexed content
+
+# User Experience
+
+## User Personas
+
+### Knowledge Worker
+- **Needs**: Quick access to project information, documentation, and historical decisions
+- **Pain points**: Time wasted searching multiple systems, missing critical context
+- **Use cases**: Finding project documentation, understanding past decisions, locating subject matter experts
+
+### New Employee
+- **Needs**: Rapid onboarding and understanding of company processes and knowledge
+- **Pain points**: Information overload, not knowing where to look for answers
+- **Use cases**: Learning about company procedures, finding relevant documentation, understanding team dynamics
+
+### Manager/Executive
+- **Needs**: High-level insights and quick access to strategic information
+- **Pain points**: Difficulty aggregating information across teams and projects
+- **Use cases**: Reviewing project statuses, finding historical data for decisions, understanding team outputs
+
+## Key User Flows
+
+1. **Search Flow**
+   - User enters natural language query in search bar
+   - System displays relevant results with snippets and source attribution
+   - User can filter by source, date, or other metadata
+   - Click-through to view full content with highlighting
+
+2. **Chat Flow**
+   - User initiates conversation with AI assistant
+   - Assistant uses search results as context for responses
+   - User asks follow-up questions for clarification
+   - Assistant provides summaries, insights, or specific answers
+
+3. **Browse Flow**
+   - User explores indexed content by source or category
+   - System shows trending topics and recent additions
+   - User can save searches and set up alerts
+
+## UI/UX Considerations
+- Clean, Google-like search interface for familiarity
+- Real-time search suggestions and auto-complete
+- Mobile-responsive design for on-the-go access
+- Dark mode support for reduced eye strain
+- Keyboard shortcuts for power users
+</context>
+<PRD>
+# Technical Architecture
+
+## System Components
+
+### Search Service (Golang)
+- RESTful API server for search queries and results
+- WebSocket support for real-time chat interactions
+- Query processing and expansion logic
+- Result ranking and filtering algorithms
+- Authentication and authorization middleware
+
+### Vector Database (Weaviate)
+- Document and embedding storage
+- Vector similarity search capabilities
+- Metadata filtering and hybrid search
+- Scalable architecture with sharding support
+- Backup and recovery mechanisms
+
+### LLM Service (Ollama)
+- llama3:8b model deployment and management
+- Context window management for large documents
+- Response streaming for better UX
+- Model performance optimization
+- Fallback mechanisms for high load
+
+### Data Ingestion Pipeline (Golang)
+- CSV parser for initial data loading
+- Document chunking and preprocessing
+- Embedding generation using sentence transformers
+- Metadata extraction and enrichment
+- Incremental update support
+
+### Web Frontend
+- React-based SPA for search interface
+- WebSocket client for chat functionality
+- Responsive design with Tailwind CSS
+- State management with Redux/Zustand
+- Component library for consistent UI
+
+## Data Models
+
+### Document Schema
+```
+{
+  "id": "uuid",
+  "content": "text",
+  "embedding": "vector",
+  "source": "string",
+  "source_id": "string",
+  "metadata": {
+    "title": "string",
+    "author": "string",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "permissions": ["user_ids"],
+    "tags": ["strings"],
+    "url": "string"
+  }
+}
+```
+
+### Search Query Model
+```
+{
+  "query": "string",
+  "filters": {
+    "sources": ["strings"],
+    "date_range": {"from": "date", "to": "date"},
+    "authors": ["strings"]
+  },
+  "limit": "integer",
+  "offset": "integer"
+}
+```
+
+## APIs and Integrations
+
+### Search API Endpoints
+- `POST /api/v1/search` - Execute semantic search
+- `GET /api/v1/documents/{id}` - Retrieve document details
+- `POST /api/v1/chat` - Initiate chat session
+- `WS /api/v1/chat/{session_id}` - WebSocket for chat
+
+### Future Connector APIs
+- Slack: Real-time message indexing via Events API
+- Jira: Issue and comment synchronization via REST API
+- GitHub: Repository content and PR/issue indexing
+- Google Workspace: Drive, Docs, and Gmail integration
+
+## Infrastructure Requirements
+
+### Docker Deployment
+```yaml
+version: '3.8'
+services:
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1
+      - OLLAMA_MAX_LOADED_MODELS=1
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  search-api:
+    build: ./search-service
+    ports:
+      - "8000:8000"
+    environment:
+      - WEAVIATE_URL=http://weaviate:8080
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - weaviate
+      - ollama
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://search-api:8000
+```
+
+# Development Roadmap
+
+## Phase 1: MVP - CSV Data Search
+- Core search API with Golang backend
+- Weaviate integration for vector storage
+- CSV data ingestion from slack directory
+- Basic web search interface
+- Document retrieval and display
+- Simple authentication system
+
+## Phase 2: Conversational AI
+- Ollama integration with llama3:8b
+- Chat interface implementation
+- Context management for conversations
+- Search result integration in chat
+- Response streaming
+- Chat history persistence
+
+## Phase 3: Advanced Search Features
+- Query expansion and suggestions
+- Faceted search and filtering
+- Search result snippets with highlighting
+- Relevance feedback mechanisms
+- Saved searches and alerts
+- Search analytics dashboard
+
+## Phase 4: Real-time Connectors
+- Slack connector with real-time indexing
+- Jira integration for issues and projects
+- GitHub connector for code and documentation
+- Google Workspace integration
+- Unified permission model
+- Incremental sync mechanisms
+
+## Phase 5: Enterprise Features
+- Advanced permission management
+- Multi-tenant support
+- API rate limiting and quotas
+- Audit logging and compliance
+- Custom embedding models
+- Search quality tuning tools
+
+# Logical Dependency Chain
+
+1. **Foundation Layer** (Must be built first)
+   - Golang project structure and dependencies
+   - Docker compose configuration
+   - Basic API framework with health checks
+   - Weaviate connection and schema setup
+
+2. **Data Layer**
+   - CSV parser implementation
+   - Document chunking algorithm
+   - Embedding generation pipeline
+   - Weaviate data insertion
+   - Basic metadata extraction
+
+3. **Search Core**
+   - Vector search implementation
+   - Result ranking algorithm
+   - API endpoint for search
+   - Error handling and logging
+   - Basic performance optimization
+
+4. **Frontend Foundation**
+   - React app setup
+   - Search UI components
+   - API client library
+   - Result display components
+   - Responsive layout
+
+5. **AI Integration**
+   - Ollama setup and configuration
+   - LLM prompt engineering
+   - Context window management
+   - Chat API implementation
+   - WebSocket connection
+
+6. **Enhancement Iterations**
+   - Each subsequent phase builds on previous work
+   - Features can be added incrementally
+   - User feedback drives prioritization
+
+# Security and Permissions
+
+## Authentication
+- JWT-based authentication system
+- OAuth2 integration for enterprise SSO
+- Session management with refresh tokens
+- Multi-factor authentication support
+
+## Authorization
+- Role-based access control (RBAC)
+- Document-level permissions
+- Source system permission inheritance
+- Admin interface for permission management
+
+## Data Security
+- Encryption at rest for sensitive data
+- TLS for all API communications
+- Secure token storage
+- Regular security audits
+
+# Scalability Considerations
+
+## Horizontal Scaling
+- Stateless API services for easy scaling
+- Weaviate sharding for large datasets
+- Load balancing for API requests
+- Caching layer with Redis
+
+## Performance Optimization
+- Query result caching
+- Embedding pre-computation
+- Batch processing for ingestion
+- Connection pooling
+- CDN for static assets
+
+## Monitoring and Observability
+- Prometheus metrics collection
+- Grafana dashboards
+- Distributed tracing with Jaeger
+- Centralized logging with ELK stack
+- Alerting for critical issues
+
+# Risks and Mitigations
+
+## Technical Challenges
+- **Risk**: LLM response quality and hallucinations
+- **Mitigation**: Implement response validation, confidence scoring, and source attribution
+
+- **Risk**: Scalability bottlenecks with vector search
+- **Mitigation**: Implement caching, optimize queries, and plan for Weaviate clustering
+
+- **Risk**: Data freshness with external connectors
+- **Mitigation**: Implement real-time webhooks and efficient incremental sync
+
+## Resource Constraints
+- **Risk**: GPU requirements for LLM inference
+- **Mitigation**: Use quantized models, implement request queuing, consider cloud GPU options
+
+- **Risk**: Storage costs for embeddings
+- **Mitigation**: Implement data retention policies, compression, and cold storage tiers
+
+## Adoption Challenges
+- **Risk**: User adoption and change management
+- **Mitigation**: Phased rollout, comprehensive training, and feedback loops
+
+# Appendix
+
+## Technology Choices Rationale
+
+### Golang
+- High performance for API services
+- Excellent concurrency support
+- Strong ecosystem for web services
+- Easy deployment with single binary
+
+### Weaviate
+- Purpose-built vector database
+- Hybrid search capabilities
+- Good Golang client library
+- Active development and community
+
+### Ollama
+- Easy local LLM deployment
+- Support for various models
+- Good performance with llama3:8b
+- Simple API interface
+
+## CSV Data Structure Example
+```csv
+message_id,timestamp,channel,user,content,thread_id,reactions
+msg_001,2024-01-15T10:30:00Z,#general,user@company.com,"Team meeting notes...",thread_123,"👍:5,✅:3"
+```
+
+## Performance Benchmarks Target
+- Search latency: < 200ms for 95th percentile
+- Ingestion rate: > 1000 documents/second
+- Concurrent users: Support 1000+ simultaneous users
+- LLM response time: < 2 seconds for first token
+
+## Compliance Considerations
+- GDPR compliance for personal data
+- SOC 2 certification requirements
+- Data residency requirements
+- Right to be forgotten implementation
+</PRD> 

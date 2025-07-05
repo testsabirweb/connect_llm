@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Implement search API endpoints
+# Status: pending
+# Dependencies: 2 (Not found), 5 (Not found)
+# Priority: high
+# Description: Create RESTful API for semantic search functionality
+# Details:
+Build Golang API server with endpoints for search queries, document retrieval, and metadata filtering. Implement vector search using Weaviate's GraphQL API.
+
+# Test Strategy:
+Test API endpoints with various queries, verify search relevance, test filters and pagination

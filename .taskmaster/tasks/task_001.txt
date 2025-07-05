@@ -1,0 +1,11 @@
+# Task ID: 1
+# Title: Set up Golang project structure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Initialize the Golang project with proper module structure, dependencies, and Docker configuration
+# Details:
+Create the initial project structure with go.mod, main.go, and organize packages for API server, data ingestion, and vector operations. Set up Docker compose file with Weaviate and Ollama services as specified in the PRD.
+
+# Test Strategy:
+Verify project builds successfully, Docker compose runs without errors, and all services are accessible on their designated ports

@@ -1,0 +1,14 @@
+# Example environment file for ConnectLLM
+# Copy this file to .env and add your actual API keys
+
+# For Taskmaster CLI usage (not needed for Cursor MCP)
+OPENROUTER_API_KEY=your-openrouter-api-key-here
+
+# Optional: If you want to use other AI providers
+# ANTHROPIC_API_KEY=your-anthropic-key-here
+# OPENAI_API_KEY=your-openai-key-here
+# PERPLEXITY_API_KEY=your-perplexity-key-here
+# GOOGLE_API_KEY=your-google-key-here
+
+# For direct DeepSeek API (if not using OpenRouter)
+# DEEPSEEK_API_KEY=your-deepseek-key-here 

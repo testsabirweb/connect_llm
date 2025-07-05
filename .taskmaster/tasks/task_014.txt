@@ -1,0 +1,11 @@
+# Task ID: 14
+# Title: Add search analytics dashboard
+# Status: pending
+# Dependencies: 6 (Not found), 9 (Not found)
+# Priority: low
+# Description: Build analytics to track search usage and performance
+# Details:
+Track search queries, measure result click-through rates, identify popular content, create admin dashboard for insights.
+
+# Test Strategy:
+Verify analytics data collection, test dashboard functionality

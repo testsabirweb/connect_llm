@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Set up Ollama integration
+# Status: pending
+# Dependencies: 1 (Not found)
+# Priority: medium
+# Description: Configure Ollama with llama3:8b model for chat functionality
+# Details:
+Set up Ollama container with proper GPU support, pull llama3:8b model, and create Go client for API interactions. Configure model parameters for optimal performance.
+
+# Test Strategy:
+Verify Ollama is running, test model inference, measure response times

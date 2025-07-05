@@ -1,0 +1,11 @@
+# Task ID: 2
+# Title: Configure Weaviate vector database
+# Status: pending
+# Dependencies: 1 (Not found)
+# Priority: high
+# Description: Set up Weaviate instance and create schema for document storage
+# Details:
+Configure Weaviate with appropriate schema for storing documents with embeddings, metadata, and permissions. Create classes for Document storage with properties matching the PRD data model.
+
+# Test Strategy:
+Test Weaviate connection, verify schema creation, and perform basic CRUD operations on documents

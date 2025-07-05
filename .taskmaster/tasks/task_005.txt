@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Create data ingestion service
+# Status: pending
+# Dependencies: 2 (Not found), 3 (Not found), 4 (Not found)
+# Priority: high
+# Description: Build service to ingest CSV data into Weaviate
+# Details:
+Combine CSV parser, document processor, and Weaviate client to create end-to-end ingestion pipeline. Include progress tracking, error handling, and resume capability for large datasets.
+
+# Test Strategy:
+Test full ingestion flow with sample data, verify data integrity in Weaviate, test error recovery

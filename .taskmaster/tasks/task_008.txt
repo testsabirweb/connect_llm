@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Build chat service backend
+# Status: pending
+# Dependencies: 6 (Not found), 7 (Not found)
+# Priority: medium
+# Description: Implement chat API with WebSocket support
+# Details:
+Create chat service that integrates search results with LLM context. Implement WebSocket handler for real-time communication, context management, and response streaming.
+
+# Test Strategy:
+Test WebSocket connections, verify context handling, test response streaming

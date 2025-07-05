@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Build document processing pipeline
+# Status: pending
+# Dependencies: 3 (Not found)
+# Priority: high
+# Description: Create pipeline for chunking documents and generating embeddings
+# Details:
+Implement document chunking algorithm to split large messages into smaller segments. Integrate with embedding generation service (initially can use Ollama or a lightweight model).
+
+# Test Strategy:
+Test chunking with various document sizes, verify embedding generation, measure processing performance
