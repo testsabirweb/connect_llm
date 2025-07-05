@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/testsabirweb/connect_llm/internal/config"
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
@@ -141,13 +143,144 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 // handleSearch handles search queries
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement search functionality
-	response := map[string]string{
-		"message": "Search endpoint - not implemented yet",
+	// Only accept GET and POST requests
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
+	ctx := r.Context()
+	startTime := time.Now()
+
+	// Parse search request
+	var req SearchRequest
+	if r.Method == http.MethodPost {
+		// Parse from request body
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+			return
+		}
+	} else {
+		// Parse from query parameters
+		req.Query = r.URL.Query().Get("q")
+		if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+			if limit, err := strconv.Atoi(limitStr); err == nil {
+				req.Limit = limit
+			}
+		}
+		if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+			if offset, err := strconv.Atoi(offsetStr); err == nil {
+				req.Offset = offset
+			}
+		}
+	}
+
+	// Validate request
+	if err := req.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Generate embeddings for the query
+	embedder := embeddings.NewOllamaEmbedder(s.config.Ollama.URL, "llama3:8b")
+	queryEmbeddings, err := embedder.GenerateEmbedding(ctx, req.Query)
+	if err != nil {
+		log.Printf("Failed to generate embeddings: %v", err)
+		http.Error(w, "Failed to process search query", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert filters to map if present
+	var filters map[string]interface{}
+	if req.Filters != nil {
+		filters = make(map[string]interface{})
+		if req.Filters.Source != "" {
+			filters["source"] = req.Filters.Source
+		}
+		if req.Filters.Author != "" {
+			filters["author"] = req.Filters.Author
+		}
+		if len(req.Filters.Tags) > 0 {
+			filters["tags"] = req.Filters.Tags
+		}
+		if req.Filters.DateFrom != nil {
+			filters["dateFrom"] = req.Filters.DateFrom.Format(time.RFC3339)
+		}
+		if req.Filters.DateTo != nil {
+			filters["dateTo"] = req.Filters.DateTo.Format(time.RFC3339)
+		}
+		if req.Filters.RequirePermission != "" {
+			filters["permissions"] = req.Filters.RequirePermission
+		}
+	}
+
+	// Perform vector search
+	searchOpts := vector.SearchOptions{
+		Query:   queryEmbeddings,
+		Limit:   req.Limit,
+		Offset:  req.Offset,
+		Filters: filters,
+	}
+
+	documents, err := s.vectorClient.SearchWithOptions(ctx, searchOpts)
+	if err != nil {
+		log.Printf("Search failed: %v", err)
+		http.Error(w, "Search failed", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert documents to search results
+	results := make([]SearchResult, 0, len(documents))
+	for i, doc := range documents {
+		// Calculate score based on position (closer = higher score)
+		// In a real implementation, we would use the distance from Weaviate
+		score := float32(1.0 - (float64(i) / float64(req.Limit)))
+
+		// Truncate content for snippet
+		contentSnippet := doc.Content
+		if len(contentSnippet) > 500 {
+			contentSnippet = contentSnippet[:497] + "..."
+		}
+
+		result := SearchResult{
+			ID:        doc.ID,
+			Content:   contentSnippet,
+			Score:     score,
+			Source:    doc.Source,
+			SourceID:  doc.SourceID,
+			Title:     doc.Metadata.Title,
+			Author:    doc.Metadata.Author,
+			URL:       doc.Metadata.URL,
+			CreatedAt: doc.Metadata.CreatedAt,
+			UpdatedAt: doc.Metadata.UpdatedAt,
+			Tags:      doc.Metadata.Tags,
+		}
+
+		results = append(results, result)
+	}
+
+	// Calculate processing time
+	processingTime := time.Since(startTime).Milliseconds()
+
+	// Build response
+	response := SearchResponse{
+		Results:          results,
+		Total:            len(documents), // In a real implementation, we'd get the total count from Weaviate
+		Count:            len(results),
+		Offset:           req.Offset,
+		ProcessingTimeMs: processingTime,
+		Metadata: &SearchMetadata{
+			ProcessedQuery:    req.Query,
+			DocumentsSearched: -1, // Unknown without full count query
+			FiltersApplied:    filters,
+		},
+	}
+
+	// Return response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response) //nolint:errcheck // Response write errors are handled by HTTP framework
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
 }
 
 // handleIngest handles data ingestion requests

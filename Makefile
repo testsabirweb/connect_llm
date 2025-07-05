@@ -33,7 +33,7 @@ ingest: build-ingest
 	fi
 	./bin/ingest -input $(INPUT) $(ARGS)
 
-## test: Run tests
+## test: Run unit tests
 test:
 	go test -v ./...
 
@@ -45,7 +45,7 @@ test-coverage:
 
 ## test-integration: Run integration tests (requires services)
 test-integration:
-	go test -v ./... -run Integration
+	INTEGRATION_TEST=true go test -v ./...
 
 ## docker-up: Start Docker services (Weaviate and Ollama)
 docker-up:

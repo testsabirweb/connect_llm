@@ -2,14 +2,41 @@ package vector
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 )
 
+// These are integration tests that require Weaviate to be running.
+// To run these tests:
+//   1. Start Weaviate: make docker-up
+//   2. Run tests: make test-integration
+//      or: INTEGRATION_TEST=true go test -v ./pkg/vector/...
+
+// Helper function to check if Weaviate is available
+func isWeaviateAvailable() bool {
+	// Check if we're explicitly running integration tests
+	if os.Getenv("INTEGRATION_TEST") != "true" {
+		return false
+	}
+
+	// Try to create a client and check health
+	client, err := NewWeaviateClient("http", "localhost:8000", "")
+	if err != nil {
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	err = client.HealthCheck(ctx)
+	return err == nil
+}
+
 func TestWeaviateClient(t *testing.T) {
-	// Skip if not in integration test mode
-	if testing.Short() {
-		t.Skip("Skipping integration test")
+	// Skip if Weaviate is not available
+	if !isWeaviateAvailable() {
+		t.Skip("Skipping integration test: Weaviate is not available. Run with INTEGRATION_TEST=true and ensure Weaviate is running on localhost:8000")
 	}
 
 	ctx := context.Background()

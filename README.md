@@ -163,6 +163,60 @@ For a complete setup and ingestion in one command:
 make ingest-quick INPUT=slack/
 ```
 
+## Search API
+
+ConnectLLM provides a powerful semantic search API that allows you to search through ingested documents using natural language queries.
+
+### Search Endpoints
+
+The search functionality is available at `/api/v1/search` and supports both GET and POST methods.
+
+#### Simple Search (GET)
+
+```bash
+# Basic search
+curl "http://localhost:8080/api/v1/search?q=database%20migration"
+
+# Search with pagination
+curl "http://localhost:8080/api/v1/search?q=security&limit=20&offset=40"
+```
+
+#### Advanced Search (POST)
+
+```bash
+# Search with filters
+curl -X POST http://localhost:8080/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "authentication",
+    "limit": 10,
+    "filters": {
+      "source": "slack",
+      "tags": ["security", "auth"],
+      "dateFrom": "2023-01-01T00:00:00Z"
+    }
+  }'
+```
+
+### Search Features
+
+- **Semantic Search**: Uses vector embeddings to find conceptually related documents
+- **Metadata Filtering**: Filter by source, author, tags, date range, and permissions
+- **Pagination**: Support for limit/offset based pagination
+- **Relevance Scoring**: Results are ranked by semantic similarity
+
+### API Documentation
+
+For detailed API documentation, see [docs/api.md](docs/api.md).
+
+### Examples
+
+Run the example script to see the search API in action:
+
+```bash
+./examples/search_example.sh
+```
+
 ## API Endpoints
 
 - `GET /health` - Health check endpoint with Weaviate status
@@ -258,12 +312,21 @@ git commit --no-verify
 ### Running tests
 
 ```bash
-# Run all tests
-go test ./...
+# Run unit tests (default)
+make test
 
 # Run tests with coverage
 make test-coverage
+
+# Run integration tests (requires Weaviate and Ollama running)
+make docker-up  # Start services first
+make test-integration
+
+# Or manually:
+INTEGRATION_TEST=true go test -v ./...
 ```
+
+**Note**: Integration tests require Weaviate to be running on `localhost:8000`. They are skipped by default when running `make test` to allow for faster CI/CD pipelines.
 
 ### Adding dependencies
 
@@ -289,7 +352,9 @@ go mod tidy
 2. ~~Implement CSV data parser for Slack export (Task 3)~~ ✅
 3. ~~Build document processing pipeline (Task 4)~~ ✅
 4. ~~Create data ingestion service (Task 5)~~ ✅
-5. Implement search API endpoints (Task 6)
+5. ~~Implement search API endpoints (Task 6)~~ ✅
+6. Set up Ollama integration (Task 7)
+7. Build chat service backend (Task 8)
 
 ## License
 

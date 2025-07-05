@@ -32,6 +32,14 @@ type DocumentMetadata struct {
 	URL         string
 }
 
+// SearchOptions contains options for search queries
+type SearchOptions struct {
+	Query   []float32
+	Limit   int
+	Offset  int
+	Filters map[string]interface{}
+}
+
 // Client interface for vector database operations
 type Client interface {
 	// Initialize sets up the database schema
@@ -42,6 +50,9 @@ type Client interface {
 
 	// Search performs a vector similarity search
 	Search(ctx context.Context, query []float32, limit int) ([]Document, error)
+
+	// SearchWithOptions performs a vector similarity search with filters
+	SearchWithOptions(ctx context.Context, opts SearchOptions) ([]Document, error)
 
 	// Delete removes a document by ID
 	Delete(ctx context.Context, id string) error
@@ -235,6 +246,56 @@ func (c *WeaviateClient) Search(ctx context.Context, query []float32, limit int)
 	return c.parseSearchResults(result)
 }
 
+// SearchWithOptions performs a vector similarity search with filters
+func (c *WeaviateClient) SearchWithOptions(ctx context.Context, opts SearchOptions) ([]Document, error) {
+	// Build the base query
+	query := c.client.GraphQL().Get().
+		WithClassName("Document").
+		WithFields(
+			graphql.Field{Name: "content"},
+			graphql.Field{Name: "source"},
+			graphql.Field{Name: "sourceId"},
+			graphql.Field{Name: "title"},
+			graphql.Field{Name: "author"},
+			graphql.Field{Name: "createdAt"},
+			graphql.Field{Name: "updatedAt"},
+			graphql.Field{Name: "permissions"},
+			graphql.Field{Name: "tags"},
+			graphql.Field{Name: "url"},
+			graphql.Field{Name: "_additional", Fields: []graphql.Field{
+				{Name: "id"},
+				{Name: "distance"},
+			}},
+		)
+
+	// Add vector search
+	if len(opts.Query) > 0 {
+		query = query.WithNearVector(c.client.GraphQL().NearVectorArgBuilder().
+			WithVector(opts.Query))
+	}
+
+	// TODO: Add proper filtering support once we understand the correct Weaviate API
+	// For now, we'll implement basic search without metadata filtering
+
+	// Apply limit
+	if opts.Limit > 0 {
+		query = query.WithLimit(opts.Limit)
+	}
+
+	// Apply offset for pagination
+	if opts.Offset > 0 {
+		query = query.WithOffset(opts.Offset)
+	}
+
+	// Execute the query
+	result, err := query.Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search documents: %w", err)
+	}
+
+	return c.parseSearchResults(result)
+}
+
 // Delete removes a document from Weaviate
 func (c *WeaviateClient) Delete(ctx context.Context, id string) error {
 	err := c.client.Data().Deleter().
@@ -265,12 +326,97 @@ func (c *WeaviateClient) HealthCheck(ctx context.Context) error {
 
 // parseSearchResults converts Weaviate GraphQL results to Document slice
 func (c *WeaviateClient) parseSearchResults(result *models.GraphQLResponse) ([]Document, error) {
-	// Implementation would parse the GraphQL response
-	// This is a placeholder - actual implementation would extract documents
-	// from the result.Data.Get map structure
-	documents := []Document{}
+	// Check if the response contains any errors
+	if len(result.Errors) > 0 {
+		return nil, fmt.Errorf("graphql errors: %v", result.Errors)
+	}
 
-	// TODO: Implement actual parsing logic
+	// Navigate to the Document class results
+	data, ok := result.Data["Get"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response structure: missing Get")
+	}
+
+	documentResults, ok := data["Document"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response structure: missing Document array")
+	}
+
+	documents := make([]Document, 0, len(documentResults))
+
+	// Parse each document result
+	for _, item := range documentResults {
+		docMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		doc := Document{
+			Metadata: DocumentMetadata{},
+		}
+
+		// Extract basic fields
+		if content, ok := docMap["content"].(string); ok {
+			doc.Content = content
+		}
+		if source, ok := docMap["source"].(string); ok {
+			doc.Source = source
+		}
+		if sourceId, ok := docMap["sourceId"].(string); ok {
+			doc.SourceID = sourceId
+		}
+
+		// Extract metadata fields
+		if title, ok := docMap["title"].(string); ok {
+			doc.Metadata.Title = title
+		}
+		if author, ok := docMap["author"].(string); ok {
+			doc.Metadata.Author = author
+		}
+		if url, ok := docMap["url"].(string); ok {
+			doc.Metadata.URL = url
+		}
+
+		// Extract date fields
+		if createdAt, ok := docMap["createdAt"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+				doc.Metadata.CreatedAt = t
+			}
+		}
+		if updatedAt, ok := docMap["updatedAt"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+				doc.Metadata.UpdatedAt = t
+			}
+		}
+
+		// Extract array fields
+		if perms, ok := docMap["permissions"].([]interface{}); ok {
+			doc.Metadata.Permissions = make([]string, 0, len(perms))
+			for _, p := range perms {
+				if pStr, ok := p.(string); ok {
+					doc.Metadata.Permissions = append(doc.Metadata.Permissions, pStr)
+				}
+			}
+		}
+		if tags, ok := docMap["tags"].([]interface{}); ok {
+			doc.Metadata.Tags = make([]string, 0, len(tags))
+			for _, t := range tags {
+				if tStr, ok := t.(string); ok {
+					doc.Metadata.Tags = append(doc.Metadata.Tags, tStr)
+				}
+			}
+		}
+
+		// Extract additional fields (ID and distance)
+		if additional, ok := docMap["_additional"].(map[string]interface{}); ok {
+			if id, ok := additional["id"].(string); ok {
+				doc.ID = id
+			}
+			// Note: distance is available here as additional["distance"] if needed
+		}
+
+		documents = append(documents, doc)
+	}
 
 	return documents, nil
 }

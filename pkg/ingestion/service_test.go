@@ -63,6 +63,10 @@ func (m *mockVectorClient) Search(ctx context.Context, query []float32, limit in
 	return nil, nil
 }
 
+func (m *mockVectorClient) SearchWithOptions(ctx context.Context, opts vector.SearchOptions) ([]vector.Document, error) {
+	return nil, nil
+}
+
 func (m *mockVectorClient) Delete(ctx context.Context, id string) error {
 	return nil
 }
