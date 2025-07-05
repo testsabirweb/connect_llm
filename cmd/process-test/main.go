@@ -9,6 +9,7 @@ import (
 	"github.com/testsabirweb/connect_llm/internal/config"
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
 	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/processing"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
@@ -51,9 +52,9 @@ func main() {
 	fmt.Printf("\nParsing CSV file: %s\n", *csvFile)
 	parser := ingestion.NewCSVParser()
 
-	var messages []ingestion.SlackMessage
+	var messages []models.SlackMessage
 	err = parser.ParseFile(*csvFile,
-		func(batch []ingestion.SlackMessage, batchNum int) error {
+		func(batch []models.SlackMessage, batchNum int) error {
 			// Only process up to limit
 			remaining := *limit - len(messages)
 			if remaining <= 0 {

@@ -7,15 +7,17 @@ import (
 	"os"
 
 	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/models"
 )
 
 func main() {
 	var (
-		csvFile    = flag.String("file", "slack/messages.csv", "Path to CSV file")
-		batchSize  = flag.Int("batch", 100, "Batch size for processing")
-		limit      = flag.Int("limit", 10, "Number of messages to display")
-		skipErrors = flag.Bool("skip-errors", true, "Skip records with errors")
-		validate   = flag.Bool("validate", true, "Validate records")
+		csvFile      = flag.String("file", "slack/messages.csv", "Path to CSV file")
+		batchSize    = flag.Int("batch", 100, "Batch size for processing")
+		limit        = flag.Int("limit", 10, "Number of messages to display")
+		skipErrors   = flag.Bool("skip-errors", true, "Skip records with errors")
+		validate     = flag.Bool("validate", true, "Validate records")
+		showMessages = flag.Bool("show-messages", false, "Show all messages in batches")
 	)
 	flag.Parse()
 
@@ -28,27 +30,30 @@ func main() {
 	parser := ingestion.NewCSVParser(config)
 
 	// Track messages for display
-	var displayMessages []ingestion.SlackMessage
+	var displayMessages []models.SlackMessage
 	totalMessages := 0
+
+	// Define a callback to handle each batch of messages
+	batchCallback := func(messages []models.SlackMessage, batchNum int) error {
+		fmt.Printf("\n=== Batch %d ===\n", batchNum)
+		fmt.Printf("Messages in batch: %d\n", len(messages))
+
+		for i, msg := range messages {
+			if *showMessages || i < 3 { // Show first 3 messages of each batch
+				printMessage(msg)
+			}
+		}
+
+		if !*showMessages && len(messages) > 3 {
+			fmt.Printf("... and %d more messages\n", len(messages)-3)
+		}
+		return nil
+	}
 
 	// Parse file with callbacks
 	err := parser.ParseFile(
 		*csvFile,
-		func(messages []ingestion.SlackMessage, batchNum int) error {
-			totalMessages += len(messages)
-
-			// Store first few messages for display
-			if len(displayMessages) < *limit {
-				remaining := *limit - len(displayMessages)
-				if remaining > len(messages) {
-					displayMessages = append(displayMessages, messages...)
-				} else {
-					displayMessages = append(displayMessages, messages[:remaining]...)
-				}
-			}
-
-			return nil
-		},
+		batchCallback,
 		func(processed, total, errors int) {
 			fmt.Printf("\rProgress: %d/%d messages processed, %d errors", processed, total, errors)
 		},
@@ -119,4 +124,30 @@ func main() {
 	if errorCount > 0 {
 		fmt.Printf("Success rate: %.2f%%\n", float64(processed)/float64(total)*100)
 	}
+}
+
+func printMessage(msg models.SlackMessage) {
+	fmt.Printf("\n--- Message ---\n")
+	fmt.Printf("ID: %s\n", msg.MessageID)
+	fmt.Printf("Time: %s\n", msg.Timestamp.Format("2006-01-02 15:04:05"))
+	fmt.Printf("Channel: %s\n", msg.Channel)
+	fmt.Printf("User: %s\n", msg.User)
+	fmt.Printf("Type: %s\n", msg.Type)
+	if msg.Subtype != "" {
+		fmt.Printf("Subtype: %s\n", msg.Subtype)
+	}
+	if msg.ThreadTS != "" {
+		fmt.Printf("Thread: %s\n", msg.ThreadTS)
+	}
+	fmt.Printf("Content: %s\n", truncateString(msg.Content, 100))
+	if msg.ReplyCount > 0 {
+		fmt.Printf("Replies: %d\n", msg.ReplyCount)
+	}
+}
+
+func truncateString(s string, maxLength int) string {
+	if len(s) > maxLength {
+		return s[:maxLength] + "..."
+	}
+	return s
 }

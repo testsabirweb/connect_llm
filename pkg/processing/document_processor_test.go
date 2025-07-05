@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
-	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/models"
 )
 
 // MockEmbedder is a mock implementation for testing
@@ -34,13 +34,13 @@ func TestDocumentProcessor_ProcessMessage(t *testing.T) {
 	// Test cases
 	tests := []struct {
 		name     string
-		message  ingestion.SlackMessage
+		message  models.SlackMessage
 		wantDocs int
 		wantErr  bool
 	}{
 		{
 			name: "Simple message",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				MessageID: "msg123",
 				Timestamp: time.Now(),
 				Channel:   "C123456",
@@ -53,7 +53,7 @@ func TestDocumentProcessor_ProcessMessage(t *testing.T) {
 		},
 		{
 			name: "Empty message with file",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				MessageID: "msg124",
 				Timestamp: time.Now(),
 				Channel:   "C123456",
@@ -67,7 +67,7 @@ func TestDocumentProcessor_ProcessMessage(t *testing.T) {
 		},
 		{
 			name: "Thread message",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				MessageID:  "msg125",
 				Timestamp:  time.Now(),
 				Channel:    "C123456",
@@ -82,7 +82,7 @@ func TestDocumentProcessor_ProcessMessage(t *testing.T) {
 		},
 		{
 			name: "System message",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				MessageID: "msg126",
 				Timestamp: time.Now(),
 				Channel:   "C123456",
@@ -170,26 +170,26 @@ func TestDocumentProcessor_GenerateTitle(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		message ingestion.SlackMessage
+		message models.SlackMessage
 		want    string
 	}{
 		{
 			name: "Short content",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Content: "Hello world",
 			},
 			want: "Hello world",
 		},
 		{
 			name: "Long content",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Content: "This is a very long message that exceeds the fifty character limit for titles",
 			},
 			want: "This is a very long message that exceeds the fi...",
 		},
 		{
 			name: "Empty content with subtype",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Content: "",
 				Subtype: "channel_join",
 			},
@@ -197,7 +197,7 @@ func TestDocumentProcessor_GenerateTitle(t *testing.T) {
 		},
 		{
 			name: "Empty content no subtype",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Content: "",
 			},
 			want: "Slack message",
@@ -219,12 +219,12 @@ func TestDocumentProcessor_ExtractTags(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		message  ingestion.SlackMessage
+		message  models.SlackMessage
 		wantTags []string
 	}{
 		{
 			name: "Basic message",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Channel: "C123",
 				Type:    "message",
 			},
@@ -232,7 +232,7 @@ func TestDocumentProcessor_ExtractTags(t *testing.T) {
 		},
 		{
 			name: "Thread with replies",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Channel:    "C123",
 				Type:       "message",
 				ThreadTS:   "123.456",
@@ -242,7 +242,7 @@ func TestDocumentProcessor_ExtractTags(t *testing.T) {
 		},
 		{
 			name: "System message",
-			message: ingestion.SlackMessage{
+			message: models.SlackMessage{
 				Channel: "C123",
 				Type:    "message",
 				Subtype: "bot_message",
@@ -277,10 +277,10 @@ func TestChunkingConfig(t *testing.T) {
 	config := DefaultChunkingConfig()
 
 	if config.MaxChunkSize != 500 {
-		t.Errorf("DefaultChunkingConfig().MaxChunkSize = %d, want 500", config.MaxChunkSize)
+		t.Errorf("Expected MaxChunkSize to be 500, got %d", config.MaxChunkSize)
 	}
 
 	if config.ChunkOverlap != 50 {
-		t.Errorf("DefaultChunkingConfig().ChunkOverlap = %d, want 50", config.ChunkOverlap)
+		t.Errorf("Expected ChunkOverlap to be 50, got %d", config.ChunkOverlap)
 	}
 }

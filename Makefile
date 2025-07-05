@@ -98,8 +98,8 @@ lint:
 fmt:
 	go fmt ./...
 
-## mod-tidy: Tidy go modules
-mod-tidy:
+## tidy: Tidy go modules
+tidy:
 	go mod tidy
 
 ## pre-commit: Run pre-commit hooks on all files

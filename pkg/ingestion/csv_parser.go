@@ -8,26 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
 
-// SlackMessage represents a message from Slack export
-type SlackMessage struct {
-	MessageID string    `json:"message_id"`
-	Timestamp time.Time `json:"timestamp"`
-	Channel   string    `json:"channel"`
-	User      string    `json:"user"`
-	Content   string    `json:"content"`
-	ThreadTS  string    `json:"thread_ts"`
-	Type      string    `json:"type"`
-	Subtype   string    `json:"subtype"`
-	// Additional fields for richer data
-	ReplyCount   int      `json:"reply_count,omitempty"`
-	ReplyUsers   []string `json:"reply_users,omitempty"`
-	Reactions    string   `json:"reactions,omitempty"`
-	ParentUserID string   `json:"parent_user_id,omitempty"`
-	BotID        string   `json:"bot_id,omitempty"`
-	FileIDs      []string `json:"file_ids,omitempty"`
-}
+	"github.com/testsabirweb/connect_llm/pkg/models"
+)
 
 // ParserConfig contains configuration for the CSV parser
 type ParserConfig struct {
@@ -68,7 +51,7 @@ func NewCSVParser(config ...ParserConfig) *CSVParser {
 }
 
 // BatchCallback is called for each batch of messages
-type BatchCallback func(messages []SlackMessage, batchNum int) error
+type BatchCallback func(messages []models.SlackMessage, batchNum int) error
 
 // ProgressCallback is called to report progress
 type ProgressCallback func(processed, total int, errors int)
@@ -116,7 +99,7 @@ func (p *CSVParser) ParseWithCallbacks(r io.Reader, totalSize int64, batchCallba
 		}
 	}
 
-	batch := make([]SlackMessage, 0, p.config.BatchSize)
+	batch := make([]models.SlackMessage, 0, p.config.BatchSize)
 	batchNum := 0
 	p.totalRecords = 0
 	p.processedRecords = 0
@@ -174,7 +157,7 @@ func (p *CSVParser) ParseWithCallbacks(r io.Reader, totalSize int64, batchCallba
 				return fmt.Errorf("batch callback error: %w", err)
 			}
 			batchNum++
-			batch = make([]SlackMessage, 0, p.config.BatchSize)
+			batch = make([]models.SlackMessage, 0, p.config.BatchSize)
 		}
 
 		// Report progress
@@ -192,10 +175,10 @@ func (p *CSVParser) ParseWithCallbacks(r io.Reader, totalSize int64, batchCallba
 }
 
 // Parse parses all messages at once (for smaller files)
-func (p *CSVParser) Parse(r io.Reader) ([]SlackMessage, error) {
-	var allMessages []SlackMessage
+func (p *CSVParser) Parse(r io.Reader) ([]models.SlackMessage, error) {
+	var allMessages []models.SlackMessage
 
-	err := p.ParseWithCallbacks(r, 0, func(messages []SlackMessage, batchNum int) error {
+	err := p.ParseWithCallbacks(r, 0, func(messages []models.SlackMessage, batchNum int) error {
 		allMessages = append(allMessages, messages...)
 		return nil
 	}, nil)
@@ -208,8 +191,8 @@ func (p *CSVParser) Parse(r io.Reader) ([]SlackMessage, error) {
 }
 
 // parseRecord converts a CSV record to SlackMessage
-func (p *CSVParser) parseRecord(record []string, columnMap map[string]int) (SlackMessage, error) {
-	msg := SlackMessage{}
+func (p *CSVParser) parseRecord(record []string, columnMap map[string]int) (models.SlackMessage, error) {
+	msg := models.SlackMessage{}
 
 	// Helper function to get field value safely
 	getField := func(fieldName string) string {
@@ -338,14 +321,14 @@ func parseJSONArrayString(s string) []string {
 }
 
 // validateMessage validates a SlackMessage
-func (p *CSVParser) validateMessage(msg SlackMessage) error {
+func (p *CSVParser) validateMessage(msg models.SlackMessage) error {
 	// Skip system messages without user
 	if msg.Subtype == "channel_join" || msg.Subtype == "channel_leave" {
 		return nil
 	}
 
 	// Messages with files might have empty content - that's OK
-	if msg.Content == "" && msg.Type == "message" && msg.Subtype == "" && len(msg.FileIDs) == 0 {
+	if msg.Content == "" && msg.Type == "message" && msg.Subtype == "" && len(msg.FileIDs) == 0 { //nolint:staticcheck // Intentionally empty - being lenient with empty messages
 		// Only flag as error if there are no file attachments
 		// In real Slack data, messages can be empty if they contain only files/attachments
 		// For now, we'll be lenient and not treat this as an error

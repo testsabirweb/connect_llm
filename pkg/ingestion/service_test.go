@@ -6,16 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
 
 // mockDocumentProcessor implements the DocumentProcessor interface for testing
 type mockDocumentProcessor struct {
-	processFunc func(context.Context, SlackMessage) ([]vector.Document, error)
+	processFunc func(context.Context, models.SlackMessage) ([]vector.Document, error)
 	callCount   int
 }
 
-func (m *mockDocumentProcessor) ProcessMessage(ctx context.Context, msg SlackMessage) ([]vector.Document, error) {
+func (m *mockDocumentProcessor) ProcessMessage(ctx context.Context, msg models.SlackMessage) ([]vector.Document, error) {
 	m.callCount++
 	if m.processFunc != nil {
 		return m.processFunc(ctx, msg)
@@ -178,9 +179,9 @@ func TestIngestionStats(t *testing.T) {
 func TestProcessBatch(t *testing.T) {
 	tests := []struct {
 		name             string
-		messages         []SlackMessage
+		messages         []models.SlackMessage
 		skipEmptyContent bool
-		processFunc      func(context.Context, SlackMessage) ([]vector.Document, error)
+		processFunc      func(context.Context, models.SlackMessage) ([]vector.Document, error)
 		storeFunc        func(context.Context, vector.Document) error
 		wantProcessed    int
 		wantSkipped      int
@@ -191,7 +192,7 @@ func TestProcessBatch(t *testing.T) {
 	}{
 		{
 			name: "successful processing",
-			messages: []SlackMessage{
+			messages: []models.SlackMessage{
 				{MessageID: "1", Content: "Hello", User: "user1"},
 				{MessageID: "2", Content: "World", User: "user2"},
 			},
@@ -205,7 +206,7 @@ func TestProcessBatch(t *testing.T) {
 		},
 		{
 			name: "skip empty content",
-			messages: []SlackMessage{
+			messages: []models.SlackMessage{
 				{MessageID: "1", Content: "Hello", User: "user1"},
 				{MessageID: "2", Content: "", User: "user2"},
 				{MessageID: "3", Content: "World", User: "user3"},
@@ -220,7 +221,7 @@ func TestProcessBatch(t *testing.T) {
 		},
 		{
 			name: "don't skip empty content",
-			messages: []SlackMessage{
+			messages: []models.SlackMessage{
 				{MessageID: "1", Content: "Hello", User: "user1"},
 				{MessageID: "2", Content: "", User: "user2"},
 			},
@@ -234,12 +235,12 @@ func TestProcessBatch(t *testing.T) {
 		},
 		{
 			name: "processing error",
-			messages: []SlackMessage{
+			messages: []models.SlackMessage{
 				{MessageID: "1", Content: "Hello", User: "user1"},
 				{MessageID: "2", Content: "Error", User: "user2"},
 			},
 			skipEmptyContent: true,
-			processFunc: func(ctx context.Context, msg SlackMessage) ([]vector.Document, error) {
+			processFunc: func(ctx context.Context, msg models.SlackMessage) ([]vector.Document, error) {
 				if msg.Content == "Error" {
 					return nil, errors.New("processing error")
 				}
@@ -254,7 +255,7 @@ func TestProcessBatch(t *testing.T) {
 		},
 		{
 			name: "storage error",
-			messages: []SlackMessage{
+			messages: []models.SlackMessage{
 				{MessageID: "1", Content: "Hello", User: "user1"},
 				{MessageID: "2", Content: "World", User: "user2"},
 			},

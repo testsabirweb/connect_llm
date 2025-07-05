@@ -9,6 +9,7 @@ import (
 	"github.com/testsabirweb/connect_llm/internal/config"
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
 	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/processing"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
@@ -138,7 +139,7 @@ type documentProcessorAdapter struct {
 	processor *processing.DocumentProcessor
 }
 
-func (a *documentProcessorAdapter) ProcessMessage(ctx context.Context, msg ingestion.SlackMessage) ([]vector.Document, error) {
+func (a *documentProcessorAdapter) ProcessMessage(ctx context.Context, msg models.SlackMessage) ([]vector.Document, error) {
 	return a.processor.ProcessMessage(ctx, msg)
 }
 

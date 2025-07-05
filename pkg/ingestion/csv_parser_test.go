@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/testsabirweb/connect_llm/pkg/models"
 )
 
 func TestNewCSVParser(t *testing.T) {
@@ -226,7 +228,7 @@ func TestCSVParser_BatchProcessing(t *testing.T) {
 	err := parser.ParseWithCallbacks(
 		strings.NewReader(csvBuilder.String()),
 		0,
-		func(messages []SlackMessage, batchNum int) error {
+		func(messages []models.SlackMessage, batchNum int) error {
 			batchCount++
 			totalMessages += len(messages)
 
@@ -270,7 +272,7 @@ func TestCSVParser_ProgressTracking(t *testing.T) {
 	err := parser.ParseWithCallbacks(
 		strings.NewReader(csvBuilder.String()),
 		0,
-		func(messages []SlackMessage, batchNum int) error {
+		func(messages []models.SlackMessage, batchNum int) error {
 			return nil
 		},
 		func(processed, total, errors int) {
@@ -297,12 +299,12 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		message SlackMessage
+		message models.SlackMessage
 		wantErr bool
 	}{
 		{
 			name: "Valid message",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content:   "Hello",
 				User:      "U123",
 				Channel:   "C123",
@@ -313,7 +315,7 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 		},
 		{
 			name: "Valid bot message",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content:   "Bot says hello",
 				BotID:     "B123",
 				Channel:   "C123",
@@ -324,7 +326,7 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 		},
 		{
 			name: "Valid system message",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content:   "<@U123> has joined",
 				User:      "U123",
 				Channel:   "C123",
@@ -336,7 +338,7 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 		},
 		{
 			name: "Missing user and bot",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content:   "Hello",
 				Channel:   "C123",
 				Timestamp: time.Now(),
@@ -346,7 +348,7 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 		},
 		{
 			name: "Missing channel",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content:   "Hello",
 				User:      "U123",
 				Timestamp: time.Now(),
@@ -356,7 +358,7 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 		},
 		{
 			name: "Missing timestamp",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content: "Hello",
 				User:    "U123",
 				Channel: "C123",
@@ -366,7 +368,7 @@ func TestCSVParser_ValidateMessage(t *testing.T) {
 		},
 		{
 			name: "Empty content for regular message (now allowed)",
-			message: SlackMessage{
+			message: models.SlackMessage{
 				Content:   "",
 				User:      "U123",
 				Channel:   "C123",

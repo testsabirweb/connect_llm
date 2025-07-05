@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
-	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
 
@@ -28,7 +28,7 @@ func NewDocumentProcessor(embedder *embeddings.OllamaEmbedder, chunkSize, chunkO
 }
 
 // ProcessMessage converts a Slack message to one or more documents
-func (p *DocumentProcessor) ProcessMessage(ctx context.Context, msg ingestion.SlackMessage) ([]vector.Document, error) {
+func (p *DocumentProcessor) ProcessMessage(ctx context.Context, msg models.SlackMessage) ([]vector.Document, error) {
 	// Skip empty messages
 	if msg.Content == "" && len(msg.FileIDs) == 0 {
 		return nil, nil
@@ -77,7 +77,7 @@ func (p *DocumentProcessor) ProcessMessage(ctx context.Context, msg ingestion.Sl
 }
 
 // ProcessMessages processes multiple messages into documents
-func (p *DocumentProcessor) ProcessMessages(ctx context.Context, messages []ingestion.SlackMessage) ([]vector.Document, error) {
+func (p *DocumentProcessor) ProcessMessages(ctx context.Context, messages []models.SlackMessage) ([]vector.Document, error) {
 	var allDocs []vector.Document
 
 	for _, msg := range messages {
@@ -129,7 +129,7 @@ func (p *DocumentProcessor) generateDocumentID(messageID string, chunkIndex int)
 }
 
 // generateTitle creates a title for the document
-func (p *DocumentProcessor) generateTitle(msg ingestion.SlackMessage) string {
+func (p *DocumentProcessor) generateTitle(msg models.SlackMessage) string {
 	// Use first 50 characters of content as title
 	title := msg.Content
 	if len(title) > 50 {
@@ -149,14 +149,14 @@ func (p *DocumentProcessor) generateTitle(msg ingestion.SlackMessage) string {
 }
 
 // extractPermissions determines who can access this document
-func (p *DocumentProcessor) extractPermissions(msg ingestion.SlackMessage) []string {
+func (p *DocumentProcessor) extractPermissions(msg models.SlackMessage) []string {
 	// For now, use channel ID as permission
 	// In a real system, you'd map channels to user groups
 	return []string{msg.Channel}
 }
 
 // extractTags generates tags for the document
-func (p *DocumentProcessor) extractTags(msg ingestion.SlackMessage) []string {
+func (p *DocumentProcessor) extractTags(msg models.SlackMessage) []string {
 	tags := []string{"slack", msg.Channel}
 
 	if msg.Type != "" {
@@ -180,7 +180,7 @@ func (p *DocumentProcessor) extractTags(msg ingestion.SlackMessage) []string {
 
 // generateSlackURL creates a URL to the original message
 // Note: This is a placeholder - real Slack URLs require workspace info
-func (p *DocumentProcessor) generateSlackURL(msg ingestion.SlackMessage) string {
+func (p *DocumentProcessor) generateSlackURL(msg models.SlackMessage) string {
 	// Format: https://workspace.slack.com/archives/CHANNEL_ID/pTIMESTAMP
 	timestamp := strings.Replace(msg.MessageID, ".", "", -1)
 	return fmt.Sprintf("slack://channel/%s/message/%s", msg.Channel, timestamp)

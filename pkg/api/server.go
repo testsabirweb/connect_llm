@@ -10,6 +10,7 @@ import (
 	"github.com/testsabirweb/connect_llm/internal/config"
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
 	"github.com/testsabirweb/connect_llm/pkg/ingestion"
+	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/processing"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
@@ -20,7 +21,7 @@ type documentProcessorAdapter struct {
 }
 
 // ProcessMessage implements the ingestion.DocumentProcessor interface
-func (a *documentProcessorAdapter) ProcessMessage(ctx context.Context, msg ingestion.SlackMessage) ([]vector.Document, error) {
+func (a *documentProcessorAdapter) ProcessMessage(ctx context.Context, msg models.SlackMessage) ([]vector.Document, error) {
 	return a.processor.ProcessMessage(ctx, msg)
 }
 
@@ -135,7 +136,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(response) //nolint:errcheck // Response write errors are handled by HTTP framework
 }
 
 // handleSearch handles search queries
@@ -146,7 +147,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(response) //nolint:errcheck // Response write errors are handled by HTTP framework
 }
 
 // handleIngest handles data ingestion requests
@@ -216,5 +217,5 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(response) //nolint:errcheck // Response write errors are handled by HTTP framework
 }

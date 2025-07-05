@@ -8,12 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
 
 // DocumentProcessor interface to avoid import cycle
 type DocumentProcessor interface {
-	ProcessMessage(ctx context.Context, msg SlackMessage) ([]vector.Document, error)
+	ProcessMessage(ctx context.Context, msg models.SlackMessage) ([]vector.Document, error)
 }
 
 // Service handles the complete ingestion pipeline
@@ -133,7 +134,7 @@ func (s *Service) IngestFile(ctx context.Context, filepath string) (*IngestionSt
 
 	// Create a worker pool for concurrent processing
 	workerCount := s.maxConcurrency
-	messageChan := make(chan []SlackMessage, workerCount)
+	messageChan := make(chan []models.SlackMessage, workerCount)
 	errorChan := make(chan error, workerCount)
 
 	// Worker goroutines
@@ -158,7 +159,7 @@ func (s *Service) IngestFile(ctx context.Context, filepath string) (*IngestionSt
 	}()
 
 	// Parse file and send batches to workers
-	err := s.parser.ParseFile(filepath, func(messages []SlackMessage, batchNum int) error {
+	err := s.parser.ParseFile(filepath, func(messages []models.SlackMessage, batchNum int) error {
 		select {
 		case messageChan <- messages:
 			return nil
@@ -230,7 +231,7 @@ func (s *Service) IngestDirectory(ctx context.Context, dirPath string) (*Ingesti
 }
 
 // processBatch processes a batch of messages
-func (s *Service) processBatch(ctx context.Context, messages []SlackMessage, stats *IngestionStats) error {
+func (s *Service) processBatch(ctx context.Context, messages []models.SlackMessage, stats *IngestionStats) error {
 	processed := 0
 	skipped := 0
 	failed := 0
