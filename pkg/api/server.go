@@ -1,18 +1,45 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
+
+	"github.com/testsabirweb/connect_llm/internal/config"
+	"github.com/testsabirweb/connect_llm/pkg/vector"
 )
 
 // Server represents the API server
 type Server struct {
-	// Add fields for dependencies like database, services, etc.
+	config       *config.Config
+	vectorClient vector.Client
 }
 
 // NewServer creates a new API server instance
-func NewServer() *Server {
-	return &Server{}
+func NewServer(cfg *config.Config) (*Server, error) {
+	// Create Weaviate client
+	vectorClient, err := vector.NewWeaviateClient(
+		cfg.Weaviate.Scheme,
+		cfg.Weaviate.Host,
+		cfg.Weaviate.APIKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize Weaviate schema
+	ctx := context.Background()
+	if err := vectorClient.Initialize(ctx); err != nil {
+		return nil, err
+	}
+
+	log.Println("Weaviate schema initialized successfully")
+
+	return &Server{
+		config:       cfg,
+		vectorClient: vectorClient,
+	}, nil
 }
 
 // Router returns the HTTP handler for the server
@@ -49,9 +76,31 @@ func (s *Server) withMiddleware(h http.Handler) http.Handler {
 
 // handleHealth returns the health status of the server
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	response := map[string]string{
+	ctx := r.Context()
+
+	// Check Weaviate connection
+	weaviateHealthy := true
+	var weaviateError string
+	if err := s.vectorClient.HealthCheck(ctx); err != nil {
+		weaviateHealthy = false
+		weaviateError = err.Error()
+	}
+
+	response := map[string]interface{}{
 		"status":  "healthy",
 		"service": "connect-llm",
+		"checks": map[string]interface{}{
+			"weaviate": map[string]interface{}{
+				"healthy": weaviateHealthy,
+				"error":   weaviateError,
+			},
+		},
+	}
+
+	// Set overall status based on component health
+	if !weaviateHealthy {
+		response["status"] = "unhealthy"
+		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

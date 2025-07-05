@@ -1,6 +1,18 @@
 # Example environment file for ConnectLLM
 # Copy this file to .env and add your actual API keys
 
+# Server Configuration
+PORT=8080
+HOST=
+
+# Weaviate Configuration
+WEAVIATE_SCHEME=http
+WEAVIATE_HOST=localhost:8000
+# WEAVIATE_API_KEY=your-weaviate-api-key-if-needed
+
+# Ollama Configuration
+OLLAMA_URL=http://localhost:11434
+
 # For Taskmaster CLI usage (not needed for Cursor MCP)
 OPENROUTER_API_KEY=your-openrouter-api-key-here
 

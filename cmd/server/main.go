@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/testsabirweb/connect_llm/internal/config"
 	"github.com/testsabirweb/connect_llm/pkg/api"
 )
 
@@ -18,12 +19,21 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Println("Starting ConnectLLM server...")
 
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	// Create a new API server
-	server := api.NewServer()
+	server, err := api.NewServer(cfg)
+	if err != nil {
+		log.Fatalf("Failed to create server: %v", err)
+	}
 
 	// Setup HTTP server
 	httpServer := &http.Server{
-		Addr:         getServerAddress(),
+		Addr:         fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
 		Handler:      server.Router(),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -52,12 +62,4 @@ func main() {
 	}
 
 	log.Println("Server exited")
-}
-
-func getServerAddress() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	return fmt.Sprintf(":%s", port)
 }

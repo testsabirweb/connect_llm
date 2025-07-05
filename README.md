@@ -44,46 +44,78 @@ git clone https://github.com/testsabirweb/connect_llm.git
 cd connect_llm
 ```
 
-### 2. Start the infrastructure
+### 2. Set up environment variables
+
+```bash
+# Copy the example environment file
+cp env-example .env
+
+# Edit .env with your configuration (optional)
+# Default values work for local development
+```
+
+### 3. Start the infrastructure
 
 ```bash
 # Start Weaviate and Ollama services
-docker compose up -d
+make docker-up
 
-# Check service health
-docker compose ps
+# Or manually:
+docker compose up -d weaviate ollama
 ```
 
-### 3. Pull the Ollama model
+### 4. Initialize Weaviate schema
+
+```bash
+# Set up the Document schema in Weaviate
+make setup-weaviate
+
+# Or with testing:
+make setup-weaviate-test
+```
+
+### 5. Pull the Ollama model
 
 ```bash
 # Pull the llama3:8b model
 docker exec -it connect_llm-ollama-1 ollama pull llama3:8b
 ```
 
-### 4. Build and run the application
+### 6. Build and run the application
 
 ```bash
-# Build the application
-go build -o bin/server cmd/server/main.go
+# Using make (recommended)
+make run
 
-# Run the server
+# Or manually:
+go build -o bin/server cmd/server/main.go
 ./bin/server
 ```
 
-Or use Docker:
+### Quick start (all-in-one)
 
 ```bash
-# Build the Docker image
-docker build -t connect-llm .
-
-# Run with Docker Compose (uncomment the app service in docker-compose.yml)
-docker compose up
+# Start everything with one command
+make dev
 ```
 
 ## API Endpoints
 
-- `GET /health` - Health check endpoint
+- `GET /health` - Health check endpoint with Weaviate status
+
+  ```json
+  {
+    "status": "healthy",
+    "service": "connect-llm",
+    "checks": {
+      "weaviate": {
+        "healthy": true,
+        "error": ""
+      }
+    }
+  }
+  ```
+
 - `GET /api/v1/search` - Search endpoint (to be implemented)
 - `POST /api/v1/ingest` - Data ingestion endpoint (to be implemented)
 
@@ -153,7 +185,7 @@ go mod tidy
 
 ## Next Steps
 
-1. Configure Weaviate schema for document storage (Task 2)
+1. ~~Configure Weaviate schema for document storage (Task 2)~~ ✅
 2. Implement CSV data parser for Slack export (Task 3)
 3. Build document processing pipeline (Task 4)
 4. Create data ingestion service (Task 5)
