@@ -186,8 +186,8 @@ go mod tidy
 ## Next Steps
 
 1. ~~Configure Weaviate schema for document storage (Task 2)~~ ✅
-2. Implement CSV data parser for Slack export (Task 3)
-3. Build document processing pipeline (Task 4)
+2. ~~Implement CSV data parser for Slack export (Task 3)~~ ✅
+3. ~~Build document processing pipeline (Task 4)~~ ✅
 4. Create data ingestion service (Task 5)
 5. Implement search API endpoints (Task 6)
 
