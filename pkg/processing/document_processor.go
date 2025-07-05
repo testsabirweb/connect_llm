@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
 	"github.com/testsabirweb/connect_llm/pkg/models"
 	"github.com/testsabirweb/connect_llm/pkg/vector"
@@ -123,9 +124,15 @@ func (p *DocumentProcessor) chunkText(text string) []string {
 
 // generateDocumentID creates a unique ID for a document chunk
 func (p *DocumentProcessor) generateDocumentID(messageID string, chunkIndex int) string {
+	// Create a deterministic UUID based on message ID and chunk index
+	// This ensures the same message/chunk combination always gets the same UUID
 	data := fmt.Sprintf("%s-%d", messageID, chunkIndex)
 	hash := sha256.Sum256([]byte(data))
-	return fmt.Sprintf("%x", hash[:8]) // Use first 8 bytes of hash
+
+	// Create a UUID v5 (SHA-1 based) using a namespace UUID and our hash
+	// Using DNS namespace as the base
+	namespace := uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	return uuid.NewSHA1(namespace, hash[:]).String()
 }
 
 // generateTitle creates a title for the document
