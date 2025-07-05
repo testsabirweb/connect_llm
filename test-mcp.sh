@@ -18,4 +18,4 @@ echo "3. Testing CLI commands..."
 task-master models | head -20
 
 echo
-echo "Test complete. If you see model configuration above, the setup is working." 
+echo "Test complete. If you see model configuration above, the setup is working."

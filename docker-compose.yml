@@ -62,4 +62,4 @@ services:
 
 volumes:
   weaviate_data:
-  ollama_data: 
+  ollama_data:

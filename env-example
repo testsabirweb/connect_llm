@@ -11,4 +11,4 @@ OPENROUTER_API_KEY=your-openrouter-api-key-here
 # GOOGLE_API_KEY=your-google-key-here
 
 # For direct DeepSeek API (if not using OpenRouter)
-# DEEPSEEK_API_KEY=your-deepseek-key-here 
+# DEEPSEEK_API_KEY=your-deepseek-key-here

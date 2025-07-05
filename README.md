@@ -90,8 +90,8 @@ docker compose up
 ## Environment Variables
 
 - `PORT` - Server port (default: 8080)
-- `WEAVIATE_URL` - Weaviate URL (default: http://localhost:8000)
-- `OLLAMA_URL` - Ollama URL (default: http://localhost:11434)
+- `WEAVIATE_URL` - Weaviate URL (default: <http://localhost:8000>)
+- `OLLAMA_URL` - Ollama URL (default: <http://localhost:11434>)
 
 ## Development
 
@@ -109,17 +109,20 @@ pre-commit install
 ```
 
 The hooks will automatically:
+
 - 🔒 **Prevent secrets** from being committed (API keys, passwords, etc.)
 - 🐹 **Format and lint Go code** before commits
 - 📝 **Validate** YAML, JSON, and other config files
 - 🧹 **Clean up** trailing whitespace and file endings
 
 To run hooks manually:
+
 ```bash
 pre-commit run --all-files
 ```
 
 To bypass hooks in emergencies (use sparingly):
+
 ```bash
 git commit --no-verify
 ```
@@ -140,11 +143,13 @@ go mod tidy
 ## Services
 
 ### Weaviate
-- URL: http://localhost:8000
+
+- URL: <http://localhost:8000>
 - gRPC: localhost:50051
 
 ### Ollama
-- URL: http://localhost:11434
+
+- URL: <http://localhost:11434>
 
 ## Next Steps
 
@@ -156,4 +161,4 @@ go mod tidy
 
 ## License
 
-[To be added] 
+[To be added]
