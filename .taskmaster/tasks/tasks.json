@@ -37,10 +37,10 @@
       },
       {
         "id": "4",
-        "title": "Build document processing pipeline",
-        "description": "Create pipeline for chunking documents and generating embeddings",
-        "details": "Implement document chunking algorithm to split large messages into smaller segments. Integrate with embedding generation service (initially can use Ollama or a lightweight model).",
-        "testStrategy": "Test chunking with various document sizes, verify embedding generation, measure processing performance",
+        "title": "Build document processing pipeline with error handling",
+        "description": "Create pipeline for chunking documents and generating embeddings with robust error handling and retry mechanisms",
+        "details": "Implement document chunking algorithm to split large messages into smaller segments. Integrate with embedding generation service (initially can use Ollama or a lightweight model). Include comprehensive error handling for failed embeddings, retry logic with exponential backoff, and ability to resume processing from failures. Track and log failed documents for manual review.",
+        "testStrategy": "Test chunking with various document sizes, verify embedding generation, measure processing performance, test error scenarios and retry mechanisms, validate resume functionality",
         "dependencies": [
           "3"
         ],
@@ -49,10 +49,10 @@
       },
       {
         "id": "5",
-        "title": "Create data ingestion service",
-        "description": "Build service to ingest CSV data into Weaviate",
-        "details": "Combine CSV parser, document processor, and Weaviate client to create end-to-end ingestion pipeline. Include progress tracking, error handling, and resume capability for large datasets.",
-        "testStrategy": "Test full ingestion flow with sample data, verify data integrity in Weaviate, test error recovery",
+        "title": "Create data ingestion service with scalability features",
+        "description": "Build service to ingest CSV data into Weaviate with error handling, retry mechanisms, and scalability testing",
+        "details": "Combine CSV parser, document processor, and Weaviate client to create end-to-end ingestion pipeline. Include progress tracking, comprehensive error handling with retry logic, batch processing for large datasets, and resume capability. Implement connection pooling and rate limiting for Weaviate operations. Add metrics for monitoring ingestion performance.",
+        "testStrategy": "Test full ingestion flow with sample data, verify data integrity in Weaviate, test error recovery and retry mechanisms, perform scalability testing with datasets of 100K+ documents, measure ingestion throughput and resource usage",
         "dependencies": [
           "2",
           "3",
@@ -63,10 +63,10 @@
       },
       {
         "id": "6",
-        "title": "Implement search API endpoints",
-        "description": "Create RESTful API for semantic search functionality",
-        "details": "Build Golang API server with endpoints for search queries, document retrieval, and metadata filtering. Implement vector search using Weaviate's GraphQL API.",
-        "testStrategy": "Test API endpoints with various queries, verify search relevance, test filters and pagination",
+        "title": "Implement hybrid search API endpoints",
+        "description": "Create RESTful API for hybrid search functionality combining semantic vector search and keyword search",
+        "details": "Build Golang API server with endpoints for search queries, document retrieval, and metadata filtering. Implement hybrid search that combines vector similarity search with keyword/BM25 search for improved accuracy. Add search result fusion strategies, relevance scoring, and configurable search modes (vector-only, keyword-only, hybrid). Implement caching layer for frequent queries.",
+        "testStrategy": "Test API endpoints with various queries, verify hybrid search relevance compared to individual search modes, test filters and pagination, perform load testing with concurrent users (target: 1000 RPS), measure search latency (target: <100ms p99)",
         "dependencies": [
           "2",
           "5"
@@ -77,9 +77,9 @@
       {
         "id": "7",
         "title": "Set up Ollama integration",
-        "description": "Configure Ollama with llama3:8b model for chat functionality",
-        "details": "Set up Ollama container with proper GPU support, pull llama3:8b model, and create Go client for API interactions. Configure model parameters for optimal performance.",
-        "testStrategy": "Verify Ollama is running, test model inference, measure response times",
+        "description": "Configure Ollama with llama3:8b model for chat functionality as part of Docker Compose setup",
+        "details": "Configure Ollama service in Docker Compose with proper GPU support (if available) or CPU fallback. Pull llama3:8b model during container initialization, and create Go client for API interactions. Configure model parameters for optimal performance. Ensure proper networking between Ollama container and API server within Docker network.",
+        "testStrategy": "Verify Ollama is running within Docker Compose network, test model inference from API container, measure response times, validate GPU usage if available",
         "dependencies": [
           "1"
         ],
@@ -88,10 +88,10 @@
       },
       {
         "id": "8",
-        "title": "Build chat service backend",
-        "description": "Implement chat API with WebSocket support",
-        "details": "Create chat service that integrates search results with LLM context. Implement WebSocket handler for real-time communication, context management, and response streaming.",
-        "testStrategy": "Test WebSocket connections, verify context handling, test response streaming",
+        "title": "Build RAG-enabled chat service backend",
+        "description": "Implement chat API with WebSocket support and Retrieval-Augmented Generation (RAG) using Weaviate search results",
+        "details": "Create chat service that implements RAG by retrieving relevant documents from Weaviate based on user queries and injecting them as context for the LLM. Implement WebSocket handler for real-time communication, context window management with document ranking, and response streaming. Include conversation history management and context compression for long conversations. Add support for citations linking responses back to source documents.",
+        "testStrategy": "Test WebSocket connections, verify RAG context injection and response accuracy, test citation generation, validate context window management, measure end-to-end response latency",
         "dependencies": [
           "6",
           "7"
@@ -126,10 +126,10 @@
       },
       {
         "id": "11",
-        "title": "Add search result ranking and filtering",
-        "description": "Enhance search with advanced ranking algorithms and filters",
-        "details": "Implement relevance scoring, add metadata-based filtering (source, date, author), create faceted search capabilities, optimize query performance.",
-        "testStrategy": "Test ranking accuracy, verify filter combinations, measure query performance",
+        "title": "Add advanced search result ranking and filtering",
+        "description": "Enhance hybrid search with advanced ranking algorithms and filters",
+        "details": "Build on top of hybrid search implementation to add advanced relevance scoring that combines vector similarity and keyword relevance scores. Add metadata-based filtering (source, date, author, channel), create faceted search capabilities, implement result re-ranking based on user interaction data. Optimize query performance with result caching and query planning.",
+        "testStrategy": "Test ranking accuracy with A/B testing, verify filter combinations work with both vector and keyword search, measure query performance under load, validate faceted search counts",
         "dependencies": [
           "6"
         ],
@@ -140,8 +140,8 @@
         "id": "12",
         "title": "Create monitoring and logging system",
         "description": "Set up observability stack for the application",
-        "details": "Integrate Prometheus for metrics, set up structured logging, create health check endpoints, add basic Grafana dashboards.",
-        "testStrategy": "Verify metrics collection, test log aggregation, validate health checks",
+        "details": "Integrate Prometheus for metrics, set up structured logging, create health check endpoints, add basic Grafana dashboards. Include specific metrics for search performance, ingestion throughput, embedding generation success rates, and RAG context retrieval effectiveness.",
+        "testStrategy": "Verify metrics collection, test log aggregation, validate health checks, ensure all critical paths have proper instrumentation",
         "dependencies": [
           "6",
           "8"
@@ -184,6 +184,19 @@
           "5"
         ],
         "priority": "low",
+        "status": "pending"
+      },
+      {
+        "id": "16",
+        "title": "Create Docker Compose deployment configuration",
+        "description": "Set up production-ready Docker Compose configuration for full application deployment",
+        "details": "Create comprehensive docker-compose.yml with all services (API server, Weaviate, Ollama, frontend). Configure proper networking, volume mounts for data persistence, environment variable management, and health checks. Include separate configurations for development and production environments. Add docker-compose.override.yml for local development customization. Document deployment process and configuration options.",
+        "testStrategy": "Test full stack deployment with docker-compose up, verify inter-service communication, test data persistence across restarts, validate resource limits and health checks work correctly",
+        "dependencies": [
+          "1",
+          "9"
+        ],
+        "priority": "medium",
         "status": "pending"
       }
     ],

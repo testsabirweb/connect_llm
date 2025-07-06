@@ -78,10 +78,13 @@ make setup-weaviate
 make setup-weaviate-test
 ```
 
-### 5. Pull the Ollama model
+### 5. Initialize Ollama with the model
 
 ```bash
-# Pull the llama3:8b model
+# Automatically pull the llama3:8b model
+./scripts/init-ollama.sh
+
+# Or manually:
 docker exec -it connect_llm-ollama-1 ollama pull llama3:8b
 ```
 
@@ -345,6 +348,16 @@ go mod tidy
 ### Ollama
 
 - URL: <http://localhost:11434>
+- Model: llama3:8b
+- GPU Support: Enabled (falls back to CPU if unavailable)
+
+The Ollama integration provides language model capabilities for:
+
+- Text embeddings generation
+- RAG-enabled chat completions
+- Streaming responses
+
+See [docs/OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md) for detailed documentation.
 
 ## Next Steps
 
@@ -353,7 +366,7 @@ go mod tidy
 3. ~~Build document processing pipeline (Task 4)~~ ✅
 4. ~~Create data ingestion service (Task 5)~~ ✅
 5. ~~Implement search API endpoints (Task 6)~~ ✅
-6. Set up Ollama integration (Task 7)
+6. ~~Set up Ollama integration (Task 7)~~ ✅
 7. Build chat service backend (Task 8)
 
 ## License
