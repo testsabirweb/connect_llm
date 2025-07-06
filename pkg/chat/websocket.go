@@ -78,10 +78,14 @@ type Citation struct {
 
 // Client represents a WebSocket client connection
 type Client struct {
-	ID   string
-	conn *websocket.Conn
-	send chan Message
-	hub  *Hub
+	ID        string
+	conn      *websocket.Conn
+	send      chan Message
+	hub       *Hub
+	ctx       context.Context
+	cancel    context.CancelFunc
+	connected bool
+	mu        sync.RWMutex
 }
 
 // Hub manages WebSocket clients
@@ -164,11 +168,17 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 		clientID = generateClientID()
 	}
 
+	// Create context for this client
+	ctx, cancel := context.WithCancel(context.Background())
+
 	client := &Client{
-		ID:   clientID,
-		conn: conn,
-		send: make(chan Message, 256),
-		hub:  h,
+		ID:        clientID,
+		conn:      conn,
+		send:      make(chan Message, 256),
+		hub:       h,
+		ctx:       ctx,
+		cancel:    cancel,
+		connected: true,
 	}
 
 	// Register client
@@ -182,6 +192,8 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 // readPump reads messages from the WebSocket connection
 func (c *Client) readPump() {
 	defer func() {
+		c.SetConnected(false)
+		c.cancel() // Cancel the client's context
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
@@ -214,7 +226,7 @@ func (c *Client) readPump() {
 		case MessageTypeChat:
 			// Handle chat message through the service
 			if c.hub.chatService != nil {
-				go c.hub.chatService.HandleChatMessage(context.Background(), c, msg)
+				go c.hub.chatService.HandleChatMessage(c.ctx, c, msg)
 			} else {
 				log.Printf("Chat service not initialized")
 			}
@@ -299,4 +311,18 @@ func (h *Hub) SetChatService(service *Service) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.chatService = service
+}
+
+// IsConnected returns true if the client is still connected
+func (c *Client) IsConnected() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.connected
+}
+
+// SetConnected updates the client's connection status
+func (c *Client) SetConnected(connected bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.connected = connected
 }

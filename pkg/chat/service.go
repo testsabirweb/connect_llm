@@ -183,11 +183,31 @@ func (s *Service) streamResponse(
 	var fullResponse strings.Builder
 
 	// Send initial streaming message
-	s.sendStreamingStart(client, messageID, responseID)
+	if !s.safeSend(client, Message{
+		Type: MessageTypeStreaming,
+		ID:   messageID,
+		Metadata: mustMarshal(StreamingResponse{
+			MessageID: responseID,
+			Chunk:     "",
+			Done:      false,
+		}),
+		Timestamp: time.Now(),
+	}) {
+		log.Printf("Client %s disconnected before streaming could start", client.ID)
+		return
+	}
 
 	// Process streaming chunks
 	go func() {
 		defer func() {
+			// Check if context is cancelled before sending final message
+			select {
+			case <-ctx.Done():
+				log.Printf("Context cancelled for client %s, skipping final message", client.ID)
+				return
+			default:
+			}
+
 			// Send final message
 			s.sendStreamingComplete(client, messageID, responseID, fullResponse.String())
 
@@ -217,6 +237,10 @@ func (s *Service) streamResponse(
 
 		for {
 			select {
+			case <-ctx.Done():
+				log.Printf("Context cancelled for client %s during streaming", client.ID)
+				return
+
 			case chunk, ok := <-respChan:
 				if !ok {
 					return
@@ -224,7 +248,19 @@ func (s *Service) streamResponse(
 
 				if chunk.Message.Content != "" {
 					fullResponse.WriteString(chunk.Message.Content)
-					s.sendStreamingChunk(client, messageID, responseID, chunk.Message.Content, chunk.Done)
+					if !s.safeSend(client, Message{
+						Type: MessageTypeStreaming,
+						ID:   messageID,
+						Metadata: mustMarshal(StreamingResponse{
+							MessageID: responseID,
+							Chunk:     chunk.Message.Content,
+							Done:      chunk.Done,
+						}),
+						Timestamp: time.Now(),
+					}) {
+						log.Printf("Failed to send chunk to client %s, stopping stream", client.ID)
+						return
+					}
 				}
 
 				if chunk.Done {
@@ -236,12 +272,15 @@ func (s *Service) streamResponse(
 					s.sendError(client, messageID, fmt.Sprintf("Streaming error: %v", err))
 					return
 				}
-
-			case <-ctx.Done():
-				return
 			}
 		}
 	}()
+}
+
+// Helper function to marshal JSON without error handling
+func mustMarshal(v interface{}) json.RawMessage {
+	data, _ := json.Marshal(v)
+	return data
 }
 
 // generateResponse generates a non-streaming response
@@ -303,6 +342,32 @@ func (s *Service) generateResponse(
 
 // Helper methods for sending messages
 
+// safeSend safely sends a message to the client's channel
+// Returns false if the channel is closed or client is disconnected
+func (s *Service) safeSend(client *Client, msg Message) bool {
+	// Check if client is still connected
+	if !client.IsConnected() {
+		return false
+	}
+
+	// Use defer to catch any panic from sending on closed channel
+	defer func() {
+		if r := recover(); r != nil {
+			// Channel was closed
+			log.Printf("Recovered from panic while sending to client %s: %v", client.ID, r)
+		}
+	}()
+
+	select {
+	case client.send <- msg:
+		return true
+	case <-time.After(100 * time.Millisecond):
+		// Timeout - client might be slow or disconnected
+		log.Printf("Timeout sending message to client %s", client.ID)
+		return false
+	}
+}
+
 func (s *Service) sendError(client *Client, messageID, error string) {
 	errorMsg := Message{
 		Type:      MessageTypeError,
@@ -310,7 +375,7 @@ func (s *Service) sendError(client *Client, messageID, error string) {
 		Error:     error,
 		Timestamp: time.Now(),
 	}
-	client.send <- errorMsg
+	s.safeSend(client, errorMsg)
 }
 
 func (s *Service) sendResponse(client *Client, requestID, responseID, content string) {
@@ -326,39 +391,7 @@ func (s *Service) sendResponse(client *Client, requestID, responseID, content st
 		Metadata:  respData,
 		Timestamp: time.Now(),
 	}
-	client.send <- responseMsg
-}
-
-func (s *Service) sendStreamingStart(client *Client, requestID, responseID string) {
-	streamData, _ := json.Marshal(StreamingResponse{
-		MessageID: responseID,
-		Chunk:     "",
-		Done:      false,
-	})
-
-	msg := Message{
-		Type:      MessageTypeStreaming,
-		ID:        requestID,
-		Metadata:  streamData,
-		Timestamp: time.Now(),
-	}
-	client.send <- msg
-}
-
-func (s *Service) sendStreamingChunk(client *Client, requestID, responseID, chunk string, done bool) {
-	streamData, _ := json.Marshal(StreamingResponse{
-		MessageID: responseID,
-		Chunk:     chunk,
-		Done:      done,
-	})
-
-	msg := Message{
-		Type:      MessageTypeStreaming,
-		ID:        requestID,
-		Metadata:  streamData,
-		Timestamp: time.Now(),
-	}
-	client.send <- msg
+	s.safeSend(client, responseMsg)
 }
 
 func (s *Service) sendStreamingComplete(client *Client, requestID, responseID, fullContent string) {
@@ -375,7 +408,9 @@ func (s *Service) sendStreamingComplete(client *Client, requestID, responseID, f
 		Metadata:  streamData,
 		Timestamp: time.Now(),
 	}
-	client.send <- msg
+	if !s.safeSend(client, msg) {
+		log.Printf("Failed to send streaming complete message to client %s", client.ID)
+	}
 }
 
 func (s *Service) sendCitations(client *Client, messageID string, citations []Citation) {
@@ -390,7 +425,9 @@ func (s *Service) sendCitations(client *Client, messageID string, citations []Ci
 		Metadata:  citationData,
 		Timestamp: time.Now(),
 	}
-	client.send <- msg
+	if !s.safeSend(client, msg) {
+		log.Printf("Failed to send citations to client %s", client.ID)
+	}
 }
 
 // GetConversationHistory returns the conversation history
