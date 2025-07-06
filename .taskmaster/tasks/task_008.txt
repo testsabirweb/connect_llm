@@ -1,11 +1,11 @@
 # Task ID: 8
-# Title: Build chat service backend
-# Status: pending
+# Title: Build RAG-enabled chat service backend
+# Status: done
 # Dependencies: 6 (Not found), 7 (Not found)
 # Priority: medium
-# Description: Implement chat API with WebSocket support
+# Description: Implement chat API with WebSocket support and Retrieval-Augmented Generation (RAG) using Weaviate search results
 # Details:
-Create chat service that integrates search results with LLM context. Implement WebSocket handler for real-time communication, context management, and response streaming.
+Create chat service that implements RAG by retrieving relevant documents from Weaviate based on user queries and injecting them as context for the LLM. Implement WebSocket handler for real-time communication, context window management with document ranking, and response streaming. Include conversation history management and context compression for long conversations. Add support for citations linking responses back to source documents.
 
 # Test Strategy:
-Test WebSocket connections, verify context handling, test response streaming
+Test WebSocket connections, verify RAG context injection and response accuracy, test citation generation, validate context window management, measure end-to-end response latency

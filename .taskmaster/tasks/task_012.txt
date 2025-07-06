@@ -5,7 +5,7 @@
 # Priority: low
 # Description: Set up observability stack for the application
 # Details:
-Integrate Prometheus for metrics, set up structured logging, create health check endpoints, add basic Grafana dashboards.
+Integrate Prometheus for metrics, set up structured logging, create health check endpoints, add basic Grafana dashboards. Include specific metrics for search performance, ingestion throughput, embedding generation success rates, and RAG context retrieval effectiveness.
 
 # Test Strategy:
-Verify metrics collection, test log aggregation, validate health checks
+Verify metrics collection, test log aggregation, validate health checks, ensure all critical paths have proper instrumentation

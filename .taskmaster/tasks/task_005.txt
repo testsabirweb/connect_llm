@@ -1,11 +1,11 @@
 # Task ID: 5
-# Title: Create data ingestion service
-# Status: pending
+# Title: Create data ingestion service with scalability features
+# Status: done
 # Dependencies: 2 (Not found), 3 (Not found), 4 (Not found)
 # Priority: high
-# Description: Build service to ingest CSV data into Weaviate
+# Description: Build service to ingest CSV data into Weaviate with error handling, retry mechanisms, and scalability testing
 # Details:
-Combine CSV parser, document processor, and Weaviate client to create end-to-end ingestion pipeline. Include progress tracking, error handling, and resume capability for large datasets.
+Combine CSV parser, document processor, and Weaviate client to create end-to-end ingestion pipeline. Include progress tracking, comprehensive error handling with retry logic, batch processing for large datasets, and resume capability. Implement connection pooling and rate limiting for Weaviate operations. Add metrics for monitoring ingestion performance.
 
 # Test Strategy:
-Test full ingestion flow with sample data, verify data integrity in Weaviate, test error recovery
+Test full ingestion flow with sample data, verify data integrity in Weaviate, test error recovery and retry mechanisms, perform scalability testing with datasets of 100K+ documents, measure ingestion throughput and resource usage

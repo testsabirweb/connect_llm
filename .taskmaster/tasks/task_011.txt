@@ -1,11 +1,11 @@
 # Task ID: 11
-# Title: Add search result ranking and filtering
+# Title: Add advanced search result ranking and filtering
 # Status: pending
 # Dependencies: 6 (Not found)
 # Priority: low
-# Description: Enhance search with advanced ranking algorithms and filters
+# Description: Enhance hybrid search with advanced ranking algorithms and filters
 # Details:
-Implement relevance scoring, add metadata-based filtering (source, date, author), create faceted search capabilities, optimize query performance.
+Build on top of hybrid search implementation to add advanced relevance scoring that combines vector similarity and keyword relevance scores. Add metadata-based filtering (source, date, author, channel), create faceted search capabilities, implement result re-ranking based on user interaction data. Optimize query performance with result caching and query planning.
 
 # Test Strategy:
-Test ranking accuracy, verify filter combinations, measure query performance
+Test ranking accuracy with A/B testing, verify filter combinations work with both vector and keyword search, measure query performance under load, validate faceted search counts

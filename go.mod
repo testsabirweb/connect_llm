@@ -6,6 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/weaviate/weaviate v1.27.0
 	github.com/weaviate/weaviate-go-client/v4 v4.16.1
 )

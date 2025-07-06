@@ -359,6 +359,40 @@ The Ollama integration provides language model capabilities for:
 
 See [docs/OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md) for detailed documentation.
 
+### Chat Service
+
+The RAG-enabled chat service provides:
+
+- **WebSocket API** for real-time chat communication
+- **RAG (Retrieval-Augmented Generation)** using Weaviate search results
+- **Streaming responses** from Ollama LLM
+- **Conversation history** management with token limits
+- **Citation tracking** to link responses back to source documents
+- **REST API** for conversation management
+
+#### Chat API Endpoints
+
+- `WS /api/v1/chat/ws` - WebSocket endpoint for real-time chat
+- `GET /api/v1/chat/conversations` - List all conversations
+- `POST /api/v1/chat/conversations` - Create a new conversation
+- `GET /api/v1/chat/conversations/{id}` - Get conversation details
+- `DELETE /api/v1/chat/conversations/{id}` - Delete a conversation
+
+#### WebSocket Message Format
+
+```json
+{
+  "type": "chat",
+  "id": "unique-message-id",
+  "content": "User's question",
+  "metadata": {
+    "query": "User's question",
+    "conversation_id": "optional-conversation-id",
+    "include_citations": true
+  }
+}
+```
+
 ## Next Steps
 
 1. ~~Configure Weaviate schema for document storage (Task 2)~~ ✅
@@ -367,7 +401,7 @@ See [docs/OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md) for detailed docume
 4. ~~Create data ingestion service (Task 5)~~ ✅
 5. ~~Implement search API endpoints (Task 6)~~ ✅
 6. ~~Set up Ollama integration (Task 7)~~ ✅
-7. Build chat service backend (Task 8)
+7. ~~Build RAG-enabled chat service backend (Task 8)~~ ✅
 
 ## License
 

@@ -1,0 +1,11 @@
+# Task ID: 16
+# Title: Create Docker Compose deployment configuration
+# Status: pending
+# Dependencies: 1 (Not found), 9 (Not found)
+# Priority: medium
+# Description: Set up production-ready Docker Compose configuration for full application deployment
+# Details:
+Create comprehensive docker-compose.yml with all services (API server, Weaviate, Ollama, frontend). Configure proper networking, volume mounts for data persistence, environment variable management, and health checks. Include separate configurations for development and production environments. Add docker-compose.override.yml for local development customization. Document deployment process and configuration options.
+
+# Test Strategy:
+Test full stack deployment with docker-compose up, verify inter-service communication, test data persistence across restarts, validate resource limits and health checks work correctly

@@ -1,11 +1,11 @@
 # Task ID: 4
-# Title: Build document processing pipeline
-# Status: pending
+# Title: Build document processing pipeline with error handling
+# Status: done
 # Dependencies: 3 (Not found)
 # Priority: high
-# Description: Create pipeline for chunking documents and generating embeddings
+# Description: Create pipeline for chunking documents and generating embeddings with robust error handling and retry mechanisms
 # Details:
-Implement document chunking algorithm to split large messages into smaller segments. Integrate with embedding generation service (initially can use Ollama or a lightweight model).
+Implement document chunking algorithm to split large messages into smaller segments. Integrate with embedding generation service (initially can use Ollama or a lightweight model). Include comprehensive error handling for failed embeddings, retry logic with exponential backoff, and ability to resume processing from failures. Track and log failed documents for manual review.
 
 # Test Strategy:
-Test chunking with various document sizes, verify embedding generation, measure processing performance
+Test chunking with various document sizes, verify embedding generation, measure processing performance, test error scenarios and retry mechanisms, validate resume functionality

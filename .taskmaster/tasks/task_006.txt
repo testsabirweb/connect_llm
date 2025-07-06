@@ -1,11 +1,11 @@
 # Task ID: 6
-# Title: Implement search API endpoints
-# Status: pending
+# Title: Implement hybrid search API endpoints
+# Status: done
 # Dependencies: 2 (Not found), 5 (Not found)
 # Priority: high
-# Description: Create RESTful API for semantic search functionality
+# Description: Create RESTful API for hybrid search functionality combining semantic vector search and keyword search
 # Details:
-Build Golang API server with endpoints for search queries, document retrieval, and metadata filtering. Implement vector search using Weaviate's GraphQL API.
+Build Golang API server with endpoints for search queries, document retrieval, and metadata filtering. Implement hybrid search that combines vector similarity search with keyword/BM25 search for improved accuracy. Add search result fusion strategies, relevance scoring, and configurable search modes (vector-only, keyword-only, hybrid). Implement caching layer for frequent queries.
 
 # Test Strategy:
-Test API endpoints with various queries, verify search relevance, test filters and pagination
+Test API endpoints with various queries, verify hybrid search relevance compared to individual search modes, test filters and pagination, perform load testing with concurrent users (target: 1000 RPS), measure search latency (target: <100ms p99)

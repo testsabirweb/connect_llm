@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/testsabirweb/connect_llm/internal/config"
+	"github.com/testsabirweb/connect_llm/pkg/chat"
 	"github.com/testsabirweb/connect_llm/pkg/embeddings"
 	"github.com/testsabirweb/connect_llm/pkg/ingestion"
 	"github.com/testsabirweb/connect_llm/pkg/models"
@@ -32,6 +33,8 @@ type Server struct {
 	config           *config.Config
 	vectorClient     vector.Client
 	ingestionService *ingestion.Service
+	chatHub          *chat.Hub
+	chatService      *chat.Service
 }
 
 // NewServer creates a new API server instance
@@ -69,10 +72,21 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	}
 	ingestionService := ingestion.NewService(vectorClient, adapter, ingestionConfig)
 
+	// Create chat hub and service
+	chatHub := chat.NewHub()
+	chatConfig := chat.DefaultServiceConfig()
+	chatConfig.OllamaURL = cfg.Ollama.URL
+	chatService := chat.NewService(chatHub, vectorClient, chatConfig)
+
+	// Start the chat hub
+	go chatHub.Run(context.Background())
+
 	return &Server{
 		config:           cfg,
 		vectorClient:     vectorClient,
 		ingestionService: ingestionService,
+		chatHub:          chatHub,
+		chatService:      chatService,
 	}, nil
 }
 
@@ -86,6 +100,11 @@ func (s *Server) Router() http.Handler {
 	// API endpoints
 	mux.HandleFunc("/api/v1/search", s.handleSearch)
 	mux.HandleFunc("/api/v1/ingest", s.handleIngest)
+
+	// Chat endpoints
+	mux.HandleFunc("/api/v1/chat/ws", s.handleWebSocket)
+	mux.HandleFunc("/api/v1/chat/conversations", s.handleConversations)
+	mux.HandleFunc("/api/v1/chat/conversations/", s.handleConversation)
 
 	// Add middleware
 	return s.withMiddleware(mux)
